@@ -132,7 +132,7 @@ Or use OpenCode's worktree tools if available. Each agent/worktree should work o
 ## Godot-Specific Notes
 
 - Project root is at repo root (`project.godot` is here)
-- Main scene: `res://game/scenes/main.tscn` (based on project.godot)
+- Main scene: `res://game/main.tscn` (based on project.godot)
 - Godot uses `res://` paths - be mindful of these when referencing files
 - Don't commit `.godot/` (already gitignored)
 - Be careful with binary files in `assets/`

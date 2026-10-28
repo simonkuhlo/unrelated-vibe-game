@@ -13,7 +13,8 @@
 1. Install [Godot 4.7](https://godotengine.org/download) (matching the version in `project.godot`)
 2. Clone this repository
 3. Open the project by opening `project.godot` in the Godot editor
-4. <!-- Run instructions to be added -->
+4. Main scene is `res://game/main.tscn`
+5. <!-- Run instructions to be added -->
 
 ## Project Structure
 
