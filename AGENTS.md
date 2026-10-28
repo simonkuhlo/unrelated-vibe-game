@@ -137,6 +137,65 @@ Or use OpenCode's worktree tools if available. Each agent/worktree should work o
 - Don't commit `.godot/` (already gitignored)
 - Be careful with binary files in `assets/`
 
+## Coding Guidelines
+
+### General Principles
+
+- **Follow project structure**: Respect the boundaries between `system/`, `game/`, `ui/`, and `assets/` as described in [docs/architecture.md](docs/architecture.md).
+- **Keep it simple**: Prefer clarity over cleverness. Write code that is easy for other agents/humans to understand.
+- **Composition over inheritance**: Favor composing nodes/resources over deep inheritance hierarchies where possible.
+- **Signal-driven design**: Use Godot signals for decoupled communication, especially between game logic and UI.
+- **Ask when uncertain**: If you're unsure about where code belongs or architectural decisions, ask the user before proceeding.
+
+### GDScript Conventions
+
+- **Naming**:
+  - Files and directories: `snake_case.gd`, `snake_case.tscn` (or `snake_case.tres`)
+  - Classes: `PascalCase` (use `class_name`)
+  - Variables and functions: `snake_case`
+  - Constants: `UPPER_SNAKE_CASE`
+  - Private members: prefix with `_` (e.g., `_internal_state`)
+- **Typing**: Prefer static typing in GDScript (`var health: int = 100`) for clarity and to catch errors early.
+- **Node references**: Use `@onready var node: NodeType = $Path` when possible. Avoid hardcoding long node paths; prefer exports or passing references.
+- **Exports**: Use `@export` for values that should be configurable in the editor.
+- **Comments**: Add comments for non-obvious logic, workarounds, or multiplayer-specific concerns. Avoid redundant comments.
+- **Formatting**: Follow Godot's default GDScript style. Keep functions focused and reasonably sized.
+
+### Architecture Boundaries
+
+- **`system/`** - Game-agnostic, reusable systems (item system, attribute system, entities, hit/hurtboxes, etc.). Must not depend on `game/` or `ui/`. These should be portable to other projects.
+- **`game/`** - Game-specific logic built on top of `system/`. Can depend on `system/`. Should expose clean signals and "endpoints" (methods) for other systems/UI to interact with.
+- **`ui/`** - Presentation layer only. Must not contain game rules or directly manipulate game internals. Read state via signals/properties from `game/` or `system/`, and call endpoints provided by them. Keep UI decoupled.
+- **`assets/`** - All raw assets (models, textures, audio, etc.). No code should live here.
+
+### Scenes, Resources, and Organization
+
+- **Scenes**: Prefer scene files (`.tscn`) for reusable entities/components. Keep the scene tree logical and avoid deeply nested, hard-to-navigate trees.
+- **Scripts**: Attach scripts to nodes that own behavior. A scene and its primary script should be co-located when tightly coupled.
+- **Resources**: Use custom `Resource` classes (`.tres`) for data definitions (items, attributes, configs) to enable reuse and editor tooling.
+- **Autoloads**: Use `@onready` singletons (Project Settings > Globals/Autoloads) sparingly and only for truly global concerns. Document autoloads if added.
+- **File locations**: Place files according to their responsibility. If you're creating a reusable system, it goes in `system/`. If it's specific to this game's rules, it goes in `game/`.
+
+### Multiplayer Considerations (Planned)
+
+Since multiplayer is planned, keep these in mind even for early work:
+
+- **Authority**: Be explicit about server/client authority. Assume code will run in a networked context.
+- **RPCs**: Use `@rpc` annotations properly when syncing. Validate actions on the server where appropriate.
+- **State sync**: Keep network-synced state minimal and deterministic where possible. Avoid sending unnecessary data.
+- **Local vs network**: Design APIs that can work in both single-player and multiplayer modes.
+- **Testing**: Use `scripts/run-multiplayer.ps1` to test with multiple instances when working on networked features.
+
+### Best Practices for Agents
+
+- **Understand before changing**: Read related files, scenes, and docs to understand existing patterns before making changes.
+- **Small, focused changes**: Keep PRs small and focused on a single issue/concern.
+- **Preserve existing style**: Match the style and patterns of surrounding code.
+- **No unrelated changes**: Don't refactor or reformat unrelated code.
+- **Test when possible**: If you can run/test in Godot, do a quick sanity check. At minimum, ensure scripts have valid syntax.
+- **Document significant additions**: If you add a new system or pattern, update relevant docs in `docs/`.
+- **Respect git rules**: Always follow the git workflow in this document. Never commit/push to `main`.
+
 ## Getting Help
 
-If you're unsure about branch naming, whether to touch main, or anything git-related, **ask the user** before proceeding.
+If you're unsure about branch naming, whether to touch main, coding conventions, or where code should live, **ask the user** before proceeding.
