@@ -119,7 +119,7 @@ Rules:
   to the project root, hash the file bytes with SHA-256, then hash the
   concatenation of `relative_path + "\0" + file_hash + "\n"`. The resulting
   value is committed into the built-in manifest. CI recomputes it and fails if
-  it differs.
+  it differs. The script is a headless Godot script under `scripts/`.
 - The dependency closure includes the scene and all resources it references
   (sub-scenes, meshes, materials, textures, scripts, audio, and so on). The
   manifest, catalog, and thumbnail are metadata, not part of the built-in
@@ -285,11 +285,11 @@ The repository validates metadata only:
 - Duplicate `(map_id, version)` entries are resolved deterministically:
   - Source precedence is **built-in > installed**.
   - If the hashes differ, the lower-precedence entry is dropped with a warning.
-    Content changes require a new version.
+    Within the same source, the lexicographically smallest `content_hash` wins
+    with a warning. Content changes require a new version.
   - If the hashes match, the duplicate is silently deduplicated.
-  - `find()` selects the highest valid semver across sources. For equal
-    versions, built-in wins, then the lexicographically smallest
-    `content_hash` is a stable final tiebreak.
+- `find()` selects the highest valid semver across sources; for equal versions,
+  built-in wins.
 - `list()` order is deterministic: `map_id` ascending, then version descending,
   then source rank.
 - Built-in entries may be checked with `ResourceLoader.exists(scene_path)`.
@@ -472,7 +472,9 @@ failure query why it happened.
 1. `RESOLVING`: `repository.find_exact(id, version, hash)`.
    - If it returns null, `find_version(id, version)` distinguishes
      `HASH_MISMATCH` (version exists, hash differs) from `VERSION_MISMATCH`
-     (version missing) and `NOT_FOUND` (map missing).
+     (version missing) and `NOT_FOUND` (map missing). If `find_version` returns
+     null, `find(id) == null` means `NOT_FOUND`; otherwise it is
+     `VERSION_MISMATCH`.
    - Invalid manifest → `INVALID_MANIFEST`.
 2. `LOADING`:
    - If `package_path` is set:
@@ -503,7 +505,8 @@ setup, handshake) belongs to the session.
    start a second one.
 2. If a load is active, cancel it and await its completion
    (`load_failed(CANCELLED)`). Do not touch the host until the active request
-   has fully unwound.
+   has fully unwound. If the load completed successfully before cancellation
+   took effect, free the resulting map below.
 3. If no map is live, set `IDLE` and emit `unload_finished`.
 4. Otherwise, free `current.root` (only the loader may free it), await
    `tree_exited`, clear `current`, set `IDLE`, emit `unload_finished`.
@@ -571,7 +574,7 @@ local loader calls. `system/maploader` contains no RPCs.
 ### Client resolution
 
 A client must be connected before it can receive the locked identity. After the
-lock arrives:
+lock arrives, the client:
 
 1. Calls `repository.find_exact(id, version, hash)`.
 2. Reports `MAP_MISSING`, `MAP_MISMATCH`, or proceeds.
@@ -667,8 +670,7 @@ game/maps/
 `@export_file` is not used for manifest paths, and manifest references are
 runtime strings, so Godot does not treat them as resource dependencies. The
 export preset must use **Export all resources in the project** so
-`catalog.tres`, `manifest.tres`, map scenes, thumbnails, and built-in packs are
-included.
+`catalog.tres`, `manifest.tres`, map scenes, and thumbnails are included.
 
 Trade-offs:
 
