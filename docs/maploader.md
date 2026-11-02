@@ -25,8 +25,8 @@ Those systems consume the loader through the contracts defined here.
 | **Map instance** | The instantiated map scene, rooted at a `MapScene` node. |
 | **Gamemode** | The rules layered on top of a loaded map. Not covered by this document. |
 | **Repository** | The app-scoped local map database. Answers "what maps do I have?" Owned by `Main`. |
-| **Pack registry** | The app-scoped record of PCKs mounted for the process lifetime. |
-| **Loader** | The session-scoped service that loads a map into a `MapHost`, using the repository and pack registry. |
+| **Pack registry** | Future: the app-scoped record of PCKs mounted for the process lifetime. Not in v1. |
+| **Loader** | The service that loads a map into a `MapHost`, using the repository. Session-scoped in the target design; owned by `Main` in v1. |
 
 The key distinction is **map = content, world = runtime**. The session loads a
 map into the world.
@@ -38,11 +38,43 @@ map into the world.
 - **Local first.** Every peer resolves maps from its own repository. Authority
   sends map identity, never a scene path.
 - **Deterministic content.** All peers must run identical map content. Matching
-  is exact on `map_id + version + content_hash`.
+  is exact on `map_id + version` plus `content_hash` when a hash is present. v1
+  built-in manifests leave the hash empty; the hashing pipeline is a separate
+  workstream (see [Content hashing](#content-hashing-deferred)).
 - **No scene transitions.** Maps are sub-scenes added to a host node. The main
   scene, session, and UI are never replaced by a map load.
 - **Fail cleanly.** Every load ends in either `load_finished` or `load_failed`.
   Partial state is cleaned up before the loader reports the result.
+
+## v1 scope
+
+v1 ships **built-in maps only**. Installed packs, hashing, and the session layer
+are designed here but not built until their own workstreams exist.
+
+**In v1:**
+
+- `MapManifest`, `MapCatalog`, `MapCatalogSource`, `MapRepository` (built-in
+  source only), `MapScene`, `LoadedMap`, `MapLoader`, `MapHost`.
+- `Main` bootstraps the repository and loads/unloads maps into `World/MapHost`.
+- A minimal map browser UI: list local maps, show thumbnails, request
+  load/unload.
+- A minimal headless GDScript test runner (`tests/run_tests.gd`, invoked through
+  `scripts/run-tests.ps1`) and the `tests/maps/test_box` fixture.
+- Reserved manifest fields (`content_hash`, `package_hash`, `package_path`,
+  `server_scene_path`) exist but are empty. `apply_setup()` exists as a no-op.
+
+**Not in v1:**
+
+- Content hashing and hash verification (separate workstream).
+- `MapPackRegistry`, installed maps, `user://maps` catalogs, and the
+  download/install flow (separate workstream).
+- Async thumbnails, preview loading, headless/server scenes, and map
+  config/setup ([#10](https://github.com/simonkuhlo/unrelated-vibe-game/issues/10)).
+- CI and repo-wide test automation; CI is handled separately.
+
+Because v1 has no hashing pipeline, an empty `content_hash` means "any hash for
+this version" in `find_exact()` and `load_map()`. The exact-hash contract becomes
+active once hashing lands.
 
 ## Core concepts
 
@@ -52,7 +84,6 @@ map into the world.
 | `MapCatalog` | `Resource` | data | A persisted list of manifests. |
 | `MapCatalogSource` | `RefCounted` | data | A catalog path plus its source kind. |
 | `MapRepository` | `RefCounted` | app | Local map database and queries. |
-| `MapPackRegistry` | `RefCounted` | app | Tracks mounted PCKs for the process lifetime. |
 | `MapLoader` | `Node` | session | Async load/unload lifecycle. |
 | `MapHost` | `Node3D` | world | Container the map instance is added to. |
 | `MapScene` | `Node3D` | map content | Base class for map roots. |
@@ -61,6 +92,10 @@ map into the world.
 `MapHost` is a plain `Node3D`; it does not need a custom script. It exists to
 make placement explicit and to support future uses such as preview loading into
 a `SubViewport`.
+
+v1 has no pack registry and no installed-source implementation; those arrive
+with downloadable maps (see [v1 scope](#v1-scope) and
+[Future extensions](#future-extensions)).
 
 ## Data contracts
 
@@ -95,12 +130,14 @@ Rules:
 - `version` is a strict numeric semver string (`MAJOR.MINOR.PATCH`). Prerelease
   and build metadata are not supported. A content change requires a new version.
 - `content_hash` identifies the map's logical content and is the authority for
-  match checks. It is comparable across built-in and installed sources. Format:
-  `sha256:<64 lowercase hex>`. The build/CI hash script computes it over the
-  scene dependency closure (see [Content hashing](#content-hashing)).
-- `package_hash` is optional and installed-only. It is the SHA-256 of the `.pck`
-  bytes for download/integrity checks and is never used for exact matching. Its
-  format matches `content_hash`.
+  match checks once the hashing pipeline exists. It is comparable across
+  built-in and installed sources. Format: `sha256:<64 lowercase hex>`, or empty.
+  **v1 built-in manifests leave it empty**; hashing is a separate workstream.
+  When empty, matching falls back to `map_id + version` (see
+  [Content hashing](#content-hashing-deferred)).
+- `package_hash` is reserved for installed packs and is empty in v1. When used,
+  it is the SHA-256 of the `.pck` bytes for download/integrity checks and is
+  never used for exact matching. Its format matches `content_hash`.
 - All path fields are plain `String`s, intentionally without `@export_file`.
   Godot file hints imply editor-time project paths, but installed manifests are
   generated at runtime and resolve paths inside `user://` packs. A validation
@@ -108,38 +145,46 @@ Rules:
 - `scene_path` points at the map scene. For built-in maps it is under `res://`.
   For installed maps it is a versioned virtual path inside the mounted pack,
   e.g. `res://maps/arena_foundry/1.2.0/map.tscn`.
-- `package_path` is empty for built-in maps and points at the pack for installed
-  maps.
+- `package_path` is reserved for installed packs and is empty in v1.
 - `thumbnail_path` is loaded on demand. For built-in maps it points under
   `res://`. For installed maps it is a sidecar outside the pack at
   `user://maps/<map_id>/<version>/thumbnail.png`, so the repository can load it
   without mounting the pack. Never store a `Texture2D` on the manifest. The
-  repository caches loaded thumbnails.
+  repository caches loaded thumbnails until `refresh()`.
 - `server_scene_path` is reserved for a future headless/server variant. Empty
   means "use `scene_path`".
 
-### Content hashing
+### Content hashing (deferred)
 
-`content_hash` uses the format `sha256:<64 lowercase hex>` and identifies the
-map's logical content, independent of how it is distributed.
+v1 does not compute, verify, or require content hashes. Built-in manifests leave
+`content_hash` empty and the repository validates the format only. The hashing
+pipeline is tracked in its own workstream.
 
-- The build/CI hash script computes a deterministic hash of the map scene and
-  its dependency closure. For each file, sorted by path relative to the project
-  root, hash the file bytes with SHA-256, then hash the concatenation of
-  `relative_path + "\0" + file_hash + "\n"`. The resulting value is committed
-  into the manifest. CI recomputes it and fails if it differs. The script is a
-  headless Godot script under `scripts/`.
+The contract to implement when hashing lands:
+
+- `content_hash` uses the format `sha256:<64 lowercase hex>` and identifies the
+  map's logical content, independent of how it is distributed.
+- A headless Godot script under `scripts/` computes a deterministic hash of the
+  map scene and its dependency closure. Paths are relative to the **map root**,
+  not the project root, so built-in and packed content hash identically. For each
+  file, sorted by relative path, hash the file bytes with SHA-256, then hash the
+  concatenation of `relative_path + "\0" + file_hash + "\n"`.
+- Scene and resource files must be canonicalized (normalized `res://` references)
+  before hashing. A `.tscn` embeds absolute resource paths and UIDs, so raw bytes
+  are not distribution-independent.
 - The dependency closure includes the scene and all resources it references
   (sub-scenes, meshes, materials, textures, scripts, audio, and so on). The
   manifest, catalog, and thumbnail are metadata, not part of the logical content
   hash.
-- **Installed maps** use the same logical hash. The pack build script computes it
-  over the source dependency closure before packing and writes it into the
-  generated manifest. The PCK's own bytes are covered by the optional
+- Installed packs use the same logical hash, computed over the source closure
+  before packing. The PCK's own bytes are covered by the optional
   `package_hash`; PCK reproducibility is not required.
 - The install flow verifies `package_hash` when present. The repository validates
   the format only; it cannot recompute either hash. A content change requires a
   new `version` and a new `content_hash`.
+- The hash is **build-time trust**, not runtime verification. The loader never
+  recomputes it, so "all peers run identical content" depends on the build
+  pipeline being correct.
 
 ### `MapCatalog`
 
@@ -157,7 +202,7 @@ const CURRENT_FORMAT_VERSION := 1
 
 The catalog is an **index/cache**, not the authority. Entries are validated
 against the filesystem when the repository loads them. Invalid or stale entries
-are dropped with a warning.
+are dropped; catalog-level problems are handled as described below.
 
 Catalog shapes differ by source:
 
@@ -171,9 +216,11 @@ guaranteed export dependency: `Main` references the catalog by a runtime string.
 The export preset therefore still uses **Export all resources in the project**
 (see [Export inclusion](#export-inclusion)).
 
-If the catalog is missing, corrupt, or has an unknown `format_version`, the
-repository rebuilds the installed catalog from sidecars. A built-in catalog with
-an unknown `format_version` is reported and its entries are dropped.
+If the installed catalog is missing, corrupt, or has an unknown `format_version`,
+the repository rebuilds it from sidecars (future). A built-in catalog with an
+unknown `format_version` is a **hard error**: the repository refuses that catalog
+and yields no built-in entries, logging an error. Silently dropping entries would
+empty the game without an obvious cause.
 
 ### `MapScene`
 
@@ -293,19 +340,23 @@ func _init(p_path: String, p_kind: Kind) -> void:
 Empty or missing paths are skipped; a repository with no catalogs is valid but
 empty. Source kind, not catalog order, defines precedence.
 
+v1 constructs the repository with the built-in descriptor only.
+
 ### Bootstrap and ownership
 
-- `Main` (`game/main.gd`) owns the app-scoped `MapRepository` and
-  `MapPackRegistry`. There is no autoload.
+- `Main` (`game/main.gd`) owns the app-scoped `MapRepository`. There is no
+  autoload.
 - At startup, `Main` creates the repository with a built-in source descriptor
   (and an installed descriptor once that feature exists), calls `refresh()`, and
-  injects both services into `Session` and the map-browser UI.
+  injects it into the map-browser UI (and the session once it exists).
+- v1 has no `MapPackRegistry`; it arrives with installed packs.
 - The future install/uninstall flow calls `refresh()` after changing
-  `user://maps`. `refresh()` re-validates entries and emits `catalog_changed()`.
+  `user://maps`. `refresh()` re-validates entries, clears the thumbnail cache,
+  and emits `catalog_changed()`.
 - `find()`, `find_version()`, and `find_exact()` return `null` when no entry
   matches.
 
-### Installed catalog rules (future)
+### Installed catalog rules (future, not in v1)
 
 - Installed maps live in version-scoped directories:
 
@@ -342,15 +393,18 @@ The repository validates metadata only:
 - `map_id` matches `^[a-z0-9_]+$` (stable lowercase slug).
 - `version` matches `^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$`
   (strict numeric semver; no leading zeros, prerelease, or build metadata).
-- `content_hash` matches `^sha256:[0-9a-f]{64}$`.
+- `content_hash` is empty or matches `^sha256:[0-9a-f]{64}$`. v1 built-in
+  manifests use the empty form.
 - `package_hash` is empty or matches `^sha256:[0-9a-f]{64}$`.
 - `scene_path` is non-empty.
 - `player_min <= player_max`.
 - Invalid entries are dropped with a warning.
+- Version ordering always uses numeric semver comparison, never string
+  comparison (`1.10.0` sorts above `1.9.0`).
 - Duplicate `(map_id, version, content_hash)` entries are silently deduplicated.
-- Duplicate `(map_id, version)` entries with different hashes are kept and
-  reported with a warning. This is a broken content state, but keeping both lets
-  `find_exact()` locate the content a peer actually has:
+- Duplicate `(map_id, version)` entries with different hashes are **kept but
+  warned about**. This is a broken content state, not an invalid one; keeping
+  both lets `find_exact()` locate the content a peer actually has:
   - `find_exact()` is hash-authoritative and searches every entry.
   - `find()` and `find_version()` prefer built-in over installed, then the
     lexicographically smallest `content_hash`.
@@ -358,9 +412,11 @@ The repository validates metadata only:
   built-in wins.
 - `list()` order is deterministic: `map_id` ascending, version descending, then
   source rank (built-in before installed), then `content_hash` ascending.
-- Built-in entries may be checked with `ResourceLoader.exists(scene_path)`.
-- Installed entries are not scene-checked until their pack is mounted. The loader
-  reports `SCENE_MISSING`, `PACK_MISSING`, or `PACK_LOAD_FAILED` at load time.
+- Built-in entries are checked with `ResourceLoader.exists(scene_path)`; a missing
+  scene drops the entry with an error.
+- Installed entries are not scene-checked until their pack is mounted (future).
+  The loader reports `SCENE_MISSING`, `PACK_MISSING`, or `PACK_LOAD_FAILED` at
+  load time.
 
 ### API
 
@@ -390,6 +446,7 @@ func find(map_id: StringName) -> MapManifest
 func find_version(map_id: StringName, version: String) -> MapManifest
 
 ## Exact authority match. Returns null when not present.
+## An empty content_hash matches any hash for that version (v1 built-in maps).
 func find_exact(
 	map_id: StringName,
 	version: String,
@@ -405,7 +462,7 @@ func has_exact(
 ## Loads a thumbnail synchronously on demand. Returns null if unavailable.
 ## Built-in thumbnails are res:// resources; installed thumbnails are sidecar
 ## PNGs under user://maps/<map_id>/<version>/, so no pack mount is required.
-## Results are cached by path for the app lifetime.
+## Results are cached by path until refresh() clears the cache.
 ## Callers must load at most one thumbnail per frame; do not fill a grid in
 ## _ready().
 func load_thumbnail(manifest: MapManifest) -> Texture2D
@@ -413,30 +470,11 @@ func load_thumbnail(manifest: MapManifest) -> Texture2D
 
 The repository does not load scenes and does not mutate game state.
 
-## Pack registry
-
-`MapPackRegistry` tracks PCKs mounted for the process lifetime. Godot cannot
-unmount a PCK, so the app-scoped registry is shared by every session loader;
-this avoids a new session trying to mount an already-mounted pack.
-
-```gdscript
-class_name MapPackRegistry
-extends RefCounted
-
-## True when the pack is already mounted.
-func is_mounted(package_path: String) -> bool
-
-## Mounts a pack. Idempotent: returns OK when already mounted.
-## Blocking main-thread call; do not call from a worker thread.
-func mount(package_path: String) -> Error
-
-func mounted_paths() -> PackedStringArray
-```
-
 ## Map loader
 
-The loader is a `Node` owned by the session. It is configured with a repository,
-a host container, and the app-scoped pack registry.
+The loader is a `Node` owned by the session. It is configured with a repository
+and a host container. v1 has no session yet, so `Main` owns the loader directly;
+it moves under `Session` once that layer exists.
 
 ```gdscript
 class_name MapLoader
@@ -485,8 +523,7 @@ signal unload_finished()
 
 func setup(
 	repository: MapRepository,
-	host: Node3D,
-	pack_registry: MapPackRegistry
+	host: Node3D
 ) -> void
 
 ## True when state is IDLE or FAILED; load_map() would be accepted.
@@ -497,6 +534,7 @@ func is_busy() -> bool
 
 ## Starts an async load. Returns a positive request ID when accepted, or
 ## INVALID_REQUEST_ID when rejected. Rejected calls emit no signal.
+## An empty content_hash matches any hash for the version (v1 built-in maps).
 func load_map(map_id: StringName, version: String, content_hash: String) -> int
 
 func cancel(request_id: int) -> bool
@@ -517,9 +555,11 @@ func unload() -> void  # coroutine; awaitable
 
 `load_map()` is only accepted from `IDLE` or `FAILED` (see `can_load()`). From
 any other state it returns `INVALID_REQUEST_ID` (-1), changes no state, and
-does not emit a signal. A rejected call is a state rejection only; content
-errors are reported asynchronously through `load_failed`. Callers must
-`unload()` first when a map is live.
+does not emit a signal. It is also rejected when `host` is null or not inside the
+tree; that is a programming error and additionally calls `push_error()`. A
+rejected call is a state rejection only; content errors are reported
+asynchronously through `load_failed`. Callers must `unload()` first when a map is
+live.
 
 `last_error`, `last_error_message`, and `last_error_request_id` retain the most
 recent failure until the next accepted load, which clears them. This lets UI
@@ -539,7 +579,8 @@ attaching after a failure query why it happened.
 
 ### Loading sequence
 
-1. `RESOLVING`: `repository.find_exact(id, version, hash)`.
+1. `RESOLVING`: `repository.find_exact(id, version, hash)`. An empty `hash`
+   matches any hash for that version (v1 built-in maps).
    - If it returns null, `find_version(id, version)` distinguishes
      `HASH_MISMATCH` (version exists, hash differs) from `VERSION_MISMATCH`
      (version missing) and `NOT_FOUND` (map missing). If `find_version` returns
@@ -548,12 +589,10 @@ attaching after a failure query why it happened.
    - Invalid manifest → `INVALID_MANIFEST`. This is defensive: `refresh()` drops
      invalid entries, so only a custom or mutated repository can produce it.
 2. `LOADING`:
-   - If `package_path` is set:
-     - If the file is absent → `PACK_MISSING`.
-     - If it is not mounted → `pack_registry.mount(package_path)`. Any error →
-       `PACK_LOAD_FAILED`. Mounting is a blocking main-thread call; do it behind
-       a loading screen.
-   - `ResourceLoader.load_threaded_request(scene_path, "PackedScene", true)`.
+   - `ResourceLoader.load_threaded_request(scene_path, "PackedScene")` with the
+     default cache mode (`CACHE_MODE_REUSE`). Packs are not mounted in v1; when
+     installed maps land, mount the pack here as a blocking main-thread call
+     behind a loading screen and report `PACK_MISSING`/`PACK_LOAD_FAILED`.
    - If the scene cannot be resolved → `SCENE_MISSING`.
    - Poll status from `_process`, emit `load_progress`, enforce the timeout.
 3. `INSTANTIATING`: `ResourceLoader.load_threaded_get()`, then
@@ -570,10 +609,14 @@ setup, handshake) belongs to the session.
 
 ### Unloading sequence
 
-`unload()` is a single-flight operation.
+`unload()` is a single-flight operation. The loader keeps
+`_unload_in_progress` plus an internal `_unload_done` signal: the first caller
+owns the work, and any caller that arrives while it runs awaits `_unload_done`
+instead of starting a second operation. `unload()` is a coroutine; callers use
+`await loader.unload()`.
 
-1. If an unload is already in progress, await the existing operation; do not
-   start a second one.
+1. If an unload is already in progress, await `_unload_done`; do not start a
+   second operation.
 2. If a load is active, cancel it and await its terminal outcome
    (`load_failed(CANCELLED)`, `load_failed(TIMEOUT)`, or another terminal
    error). Do not touch the host until the active request has fully unwound. If
@@ -607,6 +650,8 @@ emitted once per unload operation, not once per caller.
 
 ## Scene tree and placement
 
+Target layout once the session exists:
+
 ```text
 Main
 ├── Session              # owns MapLoader and the gamemode
@@ -614,6 +659,16 @@ Main
 │   ├── MapHost          # loaded map instance lives here
 │   └── GamemodeRoot     # gamemode-owned entities
 └── UI
+```
+
+v1 has no `Session` or `GamemodeRoot` yet; `Main` owns the loader directly:
+
+```text
+Main                     # game/main.gd, owns MapRepository + MapLoader
+├── World
+│   └── MapHost          # loaded map instance lives here
+└── UI
+    └── MapBrowser       # minimal v1 map browser
 ```
 
 Rules:
@@ -635,7 +690,8 @@ Rules:
 ## Multiplayer integration
 
 The session/lobby layer lives in `game/` and translates authority decisions into
-local loader calls. `system/maploader` contains no RPCs.
+local loader calls. `system/maploader` contains no RPCs. The session layer is not
+part of v1; this section defines the contract it must follow.
 
 ### Selection
 
@@ -643,6 +699,9 @@ local loader calls. `system/maploader` contains no RPCs.
 2. The session locks the selection for the loading phase.
 3. The authority broadcasts `{map_id, version, content_hash}`.
    **Never send a scene path or a package path over the network.**
+
+Until hashing lands, the broadcast `content_hash` is empty and peers match on
+`map_id + version`.
 
 ### Client resolution
 
@@ -712,20 +771,26 @@ system/maploader/
 ├── map_catalog.gd
 ├── map_catalog_source.gd
 ├── map_repository.gd
-├── map_pack_registry.gd
 ├── map_loader.gd
 ├── map_scene.gd
 └── loaded_map.gd
 
 game/
+├── main.gd        # bootstraps repository + loader
+├── main.tscn
 ├── maps/          # built-in map content + catalog
-└── session/       # authority, lobby handshake, gamemode orchestration
+└── session/       # future: authority, lobby handshake, gamemode orchestration
+
+ui/
+└── map_browser/   # minimal v1 map browser
 
 tests/
+├── run_tests.gd   # minimal headless test runner
 └── maps/          # map-loader test content + test catalog
 ```
 
 `system/maploader` must not reference `game/`, multiplayer, or UI.
+`map_pack_registry.gd` is not created in v1; it lands with downloadable maps.
 
 ## Built-in map layout
 
@@ -742,8 +807,13 @@ game/maps/
 - `manifest.tres` sets `scene_path = "res://game/maps/arena_foundry/map.tscn"`.
 - `catalog.tres` lists the built-in manifests.
 - `SpawnPoints/` and `Markers/` follow the conventions above.
+- Map-owned assets (textures, meshes, audio) live inside `game/maps/<map_id>/`
+  next to the scene. This is a deliberate exception to `assets/`: installed packs
+  must be self-contained later, so map content cannot reference loose files in
+  `assets/`. Shared project-wide assets stay in `assets/`.
 
-Test content lives outside the built-in content tree:
+Test content lives outside the built-in content tree and is excluded from
+exports:
 
 ```text
 tests/maps/
@@ -764,9 +834,11 @@ export preset must use **Export all resources in the project** so
 The export preset must also exclude `tests/*`; export-all would otherwise ship
 the test catalog and test maps.
 
-Add a build-time validation script that checks every built-in catalog entry,
-scene, and thumbnail with `ResourceLoader.exists()`, and an exported-build smoke
-test that loads the built-in catalog and resolves every entry.
+Add a local build-time validation script that checks every built-in catalog
+entry, scene, and thumbnail with `ResourceLoader.exists()`, and an exported-build
+smoke test that loads the built-in catalog and resolves every entry. CI
+enforcement of these checks is handled by the separate CI workstream, not this
+system.
 
 If build size becomes an issue later, switch to explicit export filters plus the
 same validation script.
@@ -777,15 +849,21 @@ same validation script.
 - Downloading, installing, updating, or verifying map packs at runtime.
 - Gamemode rules or entity spawning.
 - Map config/setup. The `apply_setup()` hook is reserved and not wired in v1.
-- Map browser / loading screen UI.
+- Map browser UI beyond the minimal v1 list/load browser, and loading screens.
+- Content hashing and hash verification in v1 (separate workstream).
+- `MapPackRegistry` and installed maps in v1 (separate workstream).
 - Scene transitions.
 - Match state persistence or save games.
 - Map editing or authoring tools.
 
 ## Future extensions
 
-- **Downloadable maps.** Sidecar manifests, versioned PCK internal roots, and a
-  download/install flow. The repository interface already hides distribution.
+- **Downloadable maps.** `MapPackRegistry`, installed-source catalogs, sidecar
+  manifests, versioned PCK internal roots, and a download/install flow. The
+  repository interface already hides distribution.
+- **Content hashing pipeline.** Headless hash script, canonical map-root-relative
+  hashing, manifest verification, and CI enforcement. Until it lands,
+  `content_hash` stays empty and matching uses `map_id + version`.
 - **Map config/setup.** Wire `MapScene.apply_setup(config)` into the
   gamemode/session flow. The config must be authority-derived, deterministic,
   and idempotent. Tracked in [#10](https://github.com/simonkuhlo/unrelated-vibe-game/issues/10).
@@ -804,25 +882,30 @@ same validation script.
 
 ## Test plan
 
-Automated, headless where possible:
+Automated, headless where possible. v1 uses a minimal GDScript runner
+(`tests/run_tests.gd`, invoked through `scripts/run-tests.ps1`) with no
+third-party addon. CI is handled separately.
+
+### v1
 
 | Test | Expected |
 |---|---|
 | Repository loads built-in catalog | Entries are listed and findable. |
-| `find_exact` with correct id/version/hash | Returns the manifest. |
-| `find_exact` with wrong version/hash | Returns `null`. |
+| `find_exact` with correct id/version | Returns the manifest. |
+| `find_exact` with empty hash | Returns the preferred entry for the version. |
+| `find_exact` with wrong version | Returns `null`. |
+| `find_exact` with wrong non-empty hash | Returns `null`. |
 | `find()` with multiple versions | Returns the highest strict semver. |
-| Invalid version / invalid hash | Invalid entry dropped; warning emitted. |
-| Repository source precedence | Built-in wins for equal versions; installed entries remain findable by exact hash. |
+| Invalid version / invalid hash format | Invalid entry dropped; warning emitted. |
+| Built-in catalog with unknown `format_version` | Repository refuses the catalog and logs an error; no built-in entries. |
+| Built-in entry with missing scene | Entry dropped with an error. |
 | Duplicate same version, different hash | Both entries retained; warning; `find_exact()` finds the matching hash. |
 | Successful load | State reaches `READY`, `current` is set, host has one child. |
 | Successful unload | Host is empty, `current` is `null`, state is `IDLE`. |
 | Missing map | `load_failed(NOT_FOUND)`, host empty. |
 | Version mismatch | `load_failed(VERSION_MISMATCH)`, host empty. |
-| Hash mismatch | `load_failed(HASH_MISMATCH)`, host empty. |
-| Missing pack | `load_failed(PACK_MISSING)`, host empty. |
-| Corrupt/incompatible pack | `load_failed(PACK_LOAD_FAILED)`, host empty. |
-| Missing scene in mounted pack | `load_failed(SCENE_MISSING)`, host empty. |
+| Hash mismatch (synthetic hash in fixture) | `load_failed(HASH_MISMATCH)`, host empty. |
+| Missing scene | `load_failed(SCENE_MISSING)`, host empty. |
 | Scene root is not `MapScene` | `load_failed(INVALID_SCENE)`, host empty. |
 | Cancel during load | `load_failed(CANCELLED)`, host empty, no stale signals. |
 | Unload while loading | Cancellation completes before the host is cleared; one `unload_finished`. |
@@ -831,39 +914,54 @@ Automated, headless where possible:
 | Paused tree during load | Progress/timeout polling continue; no hang. |
 | Timeout | `load_failed(TIMEOUT)`, host empty. |
 | Failed load query | `last_error` / `last_error_message` retained. |
-| `apply_setup` not invoked | Loader and gamemode complete without calling `apply_setup`. |
+| `apply_setup` not invoked | Loader completes without calling `apply_setup`. |
+| Thumbnail missing | `load_thumbnail()` returns `null`. |
+| Thumbnail cache | Repeated calls return the cached texture. |
+| Thumbnail cache invalidation | `refresh()` clears the cache. |
+| Test catalog | Repository constructed with `tests/maps/catalog.tres` loads `test_box`. |
+
+### Deferred (with their workstreams)
+
+| Test | Expected |
+|---|---|
+| Missing/corrupt pack | `load_failed(PACK_MISSING)` / `PACK_LOAD_FAILED`. |
 | Installed catalog rebuild | Missing/corrupt catalog rebuilt from `user://maps/*/*/manifest.tres`. |
 | Version-scoped installed layout | Rebuild recovers every installed version. |
 | Installed thumbnail sidecar | `load_thumbnail()` works without mounting the pack. |
-| Thumbnail missing | `load_thumbnail()` returns `null`. |
-| Thumbnail cache | Repeated calls return the cached texture. |
+| Repository source precedence | Built-in wins for equal versions; installed entries remain findable by exact hash. |
+| Content hash | CI recomputes the manifest hash and fails on drift. |
 | Exported build | Export-all plus `tests/*` exclusion; every built-in catalog entry resolves. |
-| Test catalog | Repository constructed with `tests/maps/catalog.tres` loads `test_box`. |
 
 Test content: `tests/maps/test_box/` with a simple `MapScene`, two spawn points,
-and one named marker.
+one named marker, and a manifest that carries a synthetic non-empty
+`content_hash` for the mismatch tests.
 
 ## Decisions log
 
 | Decision | Choice |
 |---|---|
 | Content term | **Map** for immutable content; **world** for the live runtime subtree. |
-| Distribution | Built-in maps now; downloadable packs later behind the same repository interface. |
-| Repository scope | App lifetime, owned by `Main`, injected into session and UI. |
-| Pack registry | App-scoped `MapPackRegistry`, owned by `Main`; packs stay mounted for the process lifetime. |
-| Loader scope | Session lifetime, owned by `Session`, loads into an explicit `MapHost`. |
-| Match policy | Exact `map_id + version + content_hash`; mismatch is reported, never silently loaded. |
+| Distribution | Built-in maps in v1; downloadable packs later behind the same repository interface. |
+| Repository scope | App lifetime, owned by `Main`, injected into the session and UI. |
+| Pack registry | Out of v1. App-scoped `MapPackRegistry` lands with downloadable maps; packs stay mounted for the process lifetime. |
+| Loader scope | Session lifetime in the target design; `Main` owns it directly in v1. Loads into an explicit `MapHost`. |
+| Match policy | Exact `map_id + version + content_hash` when a hash is present; empty hash matches any hash for the version in v1. Mismatches are reported, never silently loaded. |
 | Concurrency | One load at a time; `unload()` is single-flight and awaitable. |
-| Request rejection | `load_map()` returns an `int` request ID, or `INVALID_REQUEST_ID` (-1) when `can_load()` is false. Rejected calls emit no signal. |
-| Repository sources | Source descriptors `{path, kind}`; source kind defines precedence and rank. |
-| Installed layout | Version-scoped directories: `user://maps/<map_id>/<version>/{manifest.tres, thumbnail.png, content.pck}`. |
+| Unload single-flight | Internal `_unload_in_progress` flag plus an `_unload_done` signal; the first caller owns the work, later callers await the signal. |
+| Request rejection | `load_map()` returns an `int` request ID, or `INVALID_REQUEST_ID` (-1) when `can_load()` is false or `host` is invalid. Rejected calls emit no signal. |
+| Repository sources | Source descriptors `{path, kind}`; source kind defines precedence and rank. v1 passes the built-in descriptor only. |
+| Installed layout | Future: version-scoped directories `user://maps/<map_id>/<version>/{manifest.tres, thumbnail.png, content.pck}`. |
 | Source precedence | Built-in wins over installed for the same `(map_id, version)`; `find()` uses highest strict semver. |
-| Duplicate policy | Keep entries with the same version but different hashes; `find_exact()` is hash-authoritative; built-in preferred for browsing. |
-| Content hash | `sha256:<hex>`; canonical logical-content hash for both sources; optional `package_hash` covers pack bytes. |
+| Duplicate policy | Keep entries with the same version but different hashes (warned, not invalid); `find_exact()` is hash-authoritative; built-in preferred for browsing. |
+| Content hash | Deferred. Field reserved and empty in v1; exact-hash matching activates when the hashing workstream lands. The future hash is canonical and map-root-relative, not raw file bytes. |
 | Path schema | One `MapManifest`; all paths are plain runtime `String`s. |
-| Export | Export all resources in the project; exclude `tests/*`; validate and smoke-test exported builds. |
+| Export | Export all resources in the project; exclude `tests/*`; validate and smoke-test exported builds. CI enforcement is a separate workstream. |
 | Gamemode access | `LoadedMap` + `MapScene` read API; `apply_setup()` is reserved and not called in v1. |
-| Thumbnails | Sidecar outside packs; synchronous `load_thumbnail()` with repository cache; callers batch. |
+| Thumbnails | Sidecar outside packs; synchronous `load_thumbnail()` with repository cache cleared by `refresh()`; callers batch. |
+| Map assets | Map-owned assets are co-located under `game/maps/<map_id>/` so packs can be self-contained; shared assets stay in `assets/`. |
+| Built-in catalog `format_version` | Unknown value is a hard error; the catalog is refused rather than silently emptied. |
+| Loader cache mode | `CACHE_MODE_REUSE` for threaded scene loads in v1. |
+| Tests | Minimal headless GDScript runner under `tests/`; no third-party addon; CI handled separately. |
 | Test content | `tests/maps/` with a separate test catalog. |
 | Persistence | Godot Resources: `MapCatalog` + `MapManifest`; manifests are dependency-free. |
 | Scene transitions | Never used for maps. |
