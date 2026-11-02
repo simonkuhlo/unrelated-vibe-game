@@ -344,11 +344,11 @@ func load_thumbnail(manifest: MapManifest) -> Texture2D
 
 The repository does not load scenes and does not mutate game state.
 
-### `MapPackRegistry`
+## Pack registry
 
-Godot cannot unmount a PCK, so mounted packs live for the process lifetime. The
-app-scoped registry is shared by every session loader; this avoids a new session
-trying to mount an already-mounted pack.
+`MapPackRegistry` tracks PCKs mounted for the process lifetime. Godot cannot
+unmount a PCK, so the app-scoped registry is shared by every session loader;
+this avoids a new session trying to mount an already-mounted pack.
 
 ```gdscript
 class_name MapPackRegistry
