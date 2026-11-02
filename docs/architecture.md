@@ -20,6 +20,11 @@ These should be designed to be decoupled from game-specific rules where possible
 ### `game/`
 Holds game logic. Most of it will build on top of the systems created in `system/`. This is where game-specific rules, content integration, and gameplay flow live.
 
+Built-in map content lives in `game/maps/<map_id>/` (scene, manifest, thumbnail, and map-owned assets) so that map packs can be self-contained later. This is the exception to the `assets/` rule: assets used only by one map stay with that map.
+
+### `tests/`
+Holds test fixtures and the headless test runner. Test content (for example `tests/maps/`) is excluded from exports.
+
 ### `ui/`
 Holds everything UI related. 
 
