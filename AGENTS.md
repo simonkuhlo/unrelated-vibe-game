@@ -89,6 +89,10 @@ Keep descriptions short, lowercase, kebab-case.
    - <list key changes>
    
    ## Testing
+   - [ ] `.\scripts\verify.ps1` passes
+   - [ ] Automated tests added/updated for behavior changes
+   - [ ] Manual test recorded below (only if automation is impractical)
+   
    <how to test>
    EOF
    )"
@@ -96,8 +100,20 @@ Keep descriptions short, lowercase, kebab-case.
    - Default to **draft PRs** unless explicitly told otherwise
    - Always link the issue with `Closes #123` or `Fixes #123`
    - Provide a clear summary of changes
+   - Record any manual-only verification with exact steps and expected results
 
 3. **Report back**: Let the user know the PR is created with the link
+
+### Definition of Done
+
+A change is done when:
+
+- `.\scripts\verify.ps1` passes locally.
+- Behavior changes have added or updated tests; bug fixes have a regression test.
+- Any manual-only verification is recorded in the PR with exact steps and
+  expected results.
+- Docs are updated when behavior, architecture, or workflow changed.
+- The PR links its issue and is on a branch, never `main`.
 
 ## Parallel Work with Worktrees
 
@@ -118,6 +134,7 @@ Or use OpenCode's worktree tools if available. Each agent/worktree should work o
 - ❌ **NEVER** `git commit` to `main` or `master`
 - ❌ **NEVER** `git push` to `main` or `master`
 - ❌ **NEVER** merge, rebase, or reset on `main` without explicit permission
+- ❌ **NEVER** delete, skip, or loosen tests or CI checks to get a green build
 - ✅ **ALWAYS** branch from latest `main`
 - ✅ **ALWAYS** verify current branch with `git branch --show-current` before committing
 - ✅ **ALWAYS** create PRs for changes to `main` (squash merges preferred)
@@ -186,13 +203,32 @@ Since multiplayer is planned, keep these in mind even for early work:
 - **Local vs network**: Design APIs that can work in both single-player and multiplayer modes.
 - **Testing**: Use `scripts/run-multiplayer.ps1` to test with multiple instances when working on networked features.
 
+### Testing
+
+- **Pre-PR gate**: Run `.\scripts\verify.ps1`. It imports the project, parses
+  every first-party `.gd`, boots the main scene, and runs the gdUnit4 suites.
+- **Tests are required for behavior changes.** Bug fixes include a regression
+  test that fails before the fix.
+- **Manual escape hatch**: If automation is genuinely impractical, the PR must
+  explain why and record exact steps, expected results, and what was observed.
+  "Tested locally" is not acceptable.
+- **Never weaken the gate**: Do not delete, skip, or loosen tests, or remove CI
+  checks, to get a green build. Fix the cause or open an issue.
+- **Tiers**: `tests/unit/` (pure logic), `tests/integration/` (scenes, signals,
+  lifecycle), `tests/content/` (map data and export rules), `tests/fixtures/`
+  (shared test data). Put a test in the lowest tier that can verify it.
+- **Determinism**: Seed randomness, bound every wait, never sleep, do not touch
+  the network, do not write to `res://`, and free every node you create.
+- Full policy: [docs/testing.md](docs/testing.md).
+
 ### Best Practices for Agents
 
 - **Understand before changing**: Read related files, scenes, and docs to understand existing patterns before making changes.
 - **Small, focused changes**: Keep PRs small and focused on a single issue/concern.
 - **Preserve existing style**: Match the style and patterns of surrounding code.
 - **No unrelated changes**: Don't refactor or reformat unrelated code.
-- **Test when possible**: If you can run/test in Godot, do a quick sanity check. At minimum, ensure scripts have valid syntax.
+- **Test when possible**: Run `.\scripts\verify.ps1` for any code change. If you
+  cannot run Godot, say so in the PR instead of claiming tests passed.
 - **Document significant additions**: If you add a new system or pattern, update relevant docs in `docs/`.
 - **Respect git rules**: Always follow the git workflow in this document. Never commit/push to `main`.
 

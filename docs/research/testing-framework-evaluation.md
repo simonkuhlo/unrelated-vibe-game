@@ -1,9 +1,9 @@
 # Testing framework evaluation: GUT vs gdUnit4
 
 **Date:** 2026-11-03
-**Status:** Research complete, no implementation
+**Status:** Accepted. gdUnit4 6.2.3 was adopted in #21 after a compatibility spike on Godot 4.7.2 (Windows). Linux is verified by CI.
 **Scope:** Choosing a base for the project's automated test system
-**Related:** [Issue #11](https://github.com/simonkuhlo/unrelated-vibe-game/issues/11), [Map Loader test plan](../maploader.md#test-plan)
+**Related:** [Issue #11](https://github.com/simonkuhlo/unrelated-vibe-game/issues/11), [Issue #21](https://github.com/simonkuhlo/unrelated-vibe-game/issues/21), [Map Loader test plan](../maploader.md#test-plan)
 **Recommendation:** gdUnit4 6.2.3, with GUT 9.7.1 as the fallback if truly headless scene/input testing is required today
 
 ---
@@ -402,6 +402,18 @@ This is a documentation and packaging task that applies regardless of the framew
 ### 9.1 Recommendation
 
 **Use gdUnit4 6.2.3 as the base if the project is optimizing for long-term test capability and maintainability.**
+
+**Decision (2026-11-03):** Accepted and implemented in #21. The compatibility
+spike ran gdUnit4 6.2.3 on Godot 4.7.2 headless on Windows:
+
+- Nested-directory discovery, parameterized tests, and async signal waits work.
+- Failures return `100`; orphan warnings return `101`; a clean run returns `0`.
+- A run that collects zero tests returns `0`, so the wrapper guards against it.
+- `--ignoreHeadlessMode` is required and must be passed after the `-s` script
+  path.
+
+GUT remains the fallback but was not needed. See [../testing.md](../testing.md)
+for the implemented policy and commands.
 
 The strongest reasons are:
 
