@@ -90,15 +90,20 @@ install location, or `PATH`, in that order. See [testing.md](testing.md#running-
 
 Artifacts are never committed; `reports/` and `build/` are gitignored.
 
-## First-run caveat
+## First-run behavior
 
-GitHub runs `pull_request` workflows from the **base** branch, not the PR head.
-The pull request that first adds `ci.yml` therefore does not run it. The
-workflow first executes on the `push` to `main` after that PR merges. Do not
-expect checks on the workflow-introduction PR.
+For pull requests from branches in this repository, GitHub runs the workflow
+from the PR head, so the pull request that introduces `ci.yml` does run its own
+`CI`. This was verified on #24: `static`, `test`, and the `CI` gate all passed
+on `ubuntu-latest`, including the gdUnit4 suites.
 
-The required `CI` check also cannot be configured until the workflow has run on
-`main` at least once, because GitHub only offers checks it has seen.
+The required `CI` check can be configured as soon as the workflow has run at
+least once, because GitHub only offers checks it has seen. The run on #24
+satisfies that.
+
+Pull requests from forks use the base branch's workflow and get a read-only
+token. This repository does not accept fork PRs, so that path is not a concern
+here.
 
 ## Branch protection
 
@@ -107,7 +112,7 @@ The repository already has two rulesets targeting `main`:
 - `main-1` blocks deletion and non-fast-forward pushes.
 - `main-2` requires a pull request and code-owner review.
 
-Add the remaining requirements **after** the first `CI` run on `main`:
+Add the remaining requirements at any point after `CI` has run:
 
 1. Open **Settings → Rules → Rulesets → `main-2`**.
 2. Enable **Require status checks to pass** and add **`CI`**.
