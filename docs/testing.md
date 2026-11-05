@@ -76,14 +76,12 @@ Fixtures are shared scenes, resources, and small data files under
 extends GdUnitTestSuite
 
 
-func test_manifest_rejects_unknown_format_version() -> void:
-	var manifest := auto_free(MapManifest.new()) as MapManifest
-	manifest.format_version = 999
+func test_manifest_defaults() -> void:
+	var manifest := MapManifest.new()
 
-	var entry := MapCatalogValidator.validate(manifest)
-
-	assert_that(entry.is_valid).is_false()
-	assert_that(entry.errors).contains("unsupported format_version")
+	assert_that(String(manifest.map_id)).is_empty()
+	assert_int(manifest.player_min).is_equal(1)
+	assert_int(manifest.player_max).is_equal(32)
 ```
 
 Parameterized tests put the cases in a default `_test_parameters` argument:
