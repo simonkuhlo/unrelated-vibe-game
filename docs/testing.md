@@ -1,6 +1,6 @@
 # Testing
 
-**Status:** Active. Foundation implemented in #21; CI gates tracked in #22.
+**Status:** Active. Foundation implemented in #21; CI gates implemented in #22.
 **Framework:** gdUnit4 6.2.3, vendored under `addons/gdUnit4/`.
 **Pinned engine:** Godot 4.7.2 (`.godot-version`).
 
@@ -125,8 +125,8 @@ Scripts resolve Godot from `-GodotBin`, `GODOT_BIN`, `GODOT`, the Steam install
 location, or `PATH`, in that order. They warn when the binary does not match
 `.godot-version`.
 
-Reports are written to `reports/` (`results.xml` and `index.html`) and are
-gitignored.
+Reports are written to `reports/report_<n>/` (`results.xml` and `index.html`)
+and are gitignored.
 
 ### Exit codes
 
@@ -157,7 +157,8 @@ Every pull request runs:
 - `CI`: an aggregate job that is the only required branch-protection check.
 
 The gate targets five minutes. Slow or environment-heavy checks (export, boot
-smoke) run nightly, not on PRs.
+smoke) run nightly, not on PRs. See [ci.md](ci.md) for workflow details,
+artifacts, and the branch-protection setup.
 
 ## Determinism rules
 
@@ -178,7 +179,10 @@ Production exports must exclude:
 - `reports/*`
 - `addons/gdUnit4/*`
 
-The nightly workflow validates the exclusion and boots the exported build.
+The rules live in `export_presets.cfg` and are guarded by
+`tests/content/test_export_presets.gd` on every pull request. The nightly
+workflow verifies the built `.pck` contains `game/main.tscn` but not `tests/` or
+`addons/gdUnit4/`, then boots the exported build.
 
 ## Framework upgrades
 

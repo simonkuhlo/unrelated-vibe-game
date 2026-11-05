@@ -113,6 +113,7 @@ A change is done when:
 - Any manual-only verification is recorded in the PR with exact steps and
   expected results.
 - Docs are updated when behavior, architecture, or workflow changed.
+- The required `CI` check is green (see [docs/ci.md](docs/ci.md)).
 - The PR links its issue and is on a branch, never `main`.
 
 ## Parallel Work with Worktrees

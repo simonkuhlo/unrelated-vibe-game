@@ -25,7 +25,8 @@ if (-not [string]::IsNullOrWhiteSpace($Path)) {
     $targets += ConvertTo-ResPath -Path $Path -ProjectRoot $root
 } elseif ($Tier -eq "all") {
     foreach ($tier in @("unit", "integration", "content")) {
-        $candidate = Join-Path $root "tests\$tier"
+        # Build paths with Join-Path so the same script works on Linux CI.
+        $candidate = Join-Path (Join-Path $root "tests") $tier
         if (Test-Path -LiteralPath $candidate) {
             $targets += "res://tests/$tier"
         }
@@ -42,6 +43,18 @@ if ($targets.Count -eq 0) {
 $reportsDir = Join-Path $root "reports"
 if (Test-Path -LiteralPath $reportsDir) {
     Remove-Item -LiteralPath $reportsDir -Recurse -Force
+}
+
+# A fresh clone (and the CI test job) has no import cache. Godot cannot resolve
+# UID-based scene references without it, so import once when it is missing.
+$importCache = Join-Path (Join-Path $root ".godot") "imported"
+if (-not (Test-Path -LiteralPath $importCache)) {
+    Write-Host "== Import ==" -ForegroundColor Cyan
+    & $godot --headless --quiet --path $root --import 2>&1 | Out-Host
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "Project import failed (exit $LASTEXITCODE)." -ForegroundColor Red
+        exit $LASTEXITCODE
+    }
 }
 
 $godotArgs = @(

@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  static:
+    name: static
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Godot
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.7.2
+          use-dotnet: false
+
+      - name: Import, parse, and boot
+        shell: pwsh
+        run: ./scripts/check.ps1
+
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Godot
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.7.2
+          use-dotnet: false
+
+      - name: Run gdUnit4 suites
+        shell: pwsh
+        run: ./scripts/test.ps1
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: gdunit4-reports
+          path: reports/
+          if-no-files-found: warn
+
+  # Single required branch-protection check. `if: always()` makes the gate run
+  # even when a dependency fails; the script below then fails explicitly so a
+  # skipped dependency can never look like a green run.
+  gate:
+    name: CI
+    if: always()
+    needs: [static, test]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require static and test
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "static: ${{ needs.static.result }}"
+          echo "test:   ${{ needs.test.result }}"
+          if [ "${{ needs.static.result }}" != "success" ] || [ "${{ needs.test.result }}" != "success" ]; then
+            echo "Required jobs did not succeed." >&2
+            exit 1
+          fi

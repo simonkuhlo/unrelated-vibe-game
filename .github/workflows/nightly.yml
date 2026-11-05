@@ -1,0 +1,87 @@
+name: Nightly
+
+on:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nightly-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  export-and-boot:
+    name: export-and-boot
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Godot with export templates
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.7.2
+          use-dotnet: false
+          include-templates: true
+
+      - name: Verify project
+        shell: pwsh
+        run: ./scripts/verify.ps1
+
+      - name: Export Linux build
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/linux
+          godot --headless --path . --export-release "Linux" "$PWD/build/linux/unrelated-vibe-game.x86_64"
+          chmod +x build/linux/unrelated-vibe-game.x86_64
+          ls -la build/linux
+
+      - name: Boot exported build
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./build/linux/unrelated-vibe-game.x86_64 --headless --quit-after 3
+
+      - name: Verify export contents
+        shell: bash
+        run: |
+          set -euo pipefail
+          pck="$(find build/linux -maxdepth 1 -name '*.pck' -print -quit)"
+          if [ -z "$pck" ]; then
+            echo "No .pck produced; refusing to trust the export." >&2
+            exit 1
+          fi
+
+          echo "Inspecting $pck"
+
+          # Positive control: if this fails, the scan below is meaningless.
+          if ! grep -a -q 'game/main.tscn' "$pck"; then
+            echo "Positive control failed: game/main.tscn is missing from the export." >&2
+            exit 1
+          fi
+
+          # `project.binary` embeds the enabled editor-plugin path
+          # `res://addons/gdUnit4/plugin.cfg`, so a bare `addons/gdUnit4/`
+          # search would false-positive. Use directory sentinels that only
+          # appear when real addon/test files are packed.
+          for forbidden in 'tests/' 'addons/gdUnit4/src/'; do
+            if grep -a -q "$forbidden" "$pck"; then
+              echo "Forbidden path '$forbidden' was exported." >&2
+              exit 1
+            fi
+          done
+
+          echo "Export contains game/main.tscn and excludes tests/ and addons/gdUnit4/src/."
+
+      - name: Upload export on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: nightly-export
+          path: build/
+          if-no-files-found: ignore
