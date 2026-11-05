@@ -1,0 +1,64 @@
+name: Feature
+description: Propose or track a feature or enhancement
+title: "feat: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What problem does this solve, and for whom?
+      placeholder: Describe the feature and why it is needed.
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: Concrete list of what is in scope.
+      placeholder: |
+        - Add ...
+        - Update ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Observable, testable conditions that define "done".
+      placeholder: |
+        - [ ] ...
+        - [ ] ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: test-plan
+    attributes:
+      label: Test plan
+      description: Which automated tests will prove this works? Name the tier and suite. If automation is genuinely impractical, explain why and list exact manual steps.
+      placeholder: |
+        - Unit: tests/unit/... (what it asserts)
+        - Integration: tests/integration/... (what it asserts)
+        - Manual: only if automation is impractical
+    validations:
+      required: true
+
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies
+      description: Issues, systems, or decisions this depends on or blocks.
+      placeholder: Blocked by #..., blocks #...
+    validations:
+      required: false
+
+  - type: textarea
+    id: out-of-scope
+    attributes:
+      label: Out of scope
+      description: Things this issue explicitly does not cover.
+    validations:
+      required: false
