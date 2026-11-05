@@ -58,8 +58,8 @@ are designed here but not built until their own workstreams exist.
 - `Main` bootstraps the repository and loads/unloads maps into `World/MapHost`.
 - A minimal map browser UI: list local maps, show thumbnails, request
   load/unload.
-- A minimal headless GDScript test runner (`tests/run_tests.gd`, invoked through
-  `scripts/run-tests.ps1`) and the `tests/maps/test_box` fixture.
+- A gdUnit4 test suite under `tests/` (see [testing.md](testing.md)) and the
+  `tests/fixtures/maps/test_box` fixture.
 - Reserved manifest fields (`content_hash`, `package_hash`, `package_path`,
   `server_scene_path`) exist but are empty. `apply_setup()` exists as a no-op.
 
@@ -70,7 +70,8 @@ are designed here but not built until their own workstreams exist.
   download/install flow (separate workstream).
 - Async thumbnails, preview loading, headless/server scenes, and map
   config/setup ([#10](https://github.com/simonkuhlo/unrelated-vibe-game/issues/10)).
-- CI and repo-wide test automation; CI is handled separately.
+- Repo-wide test automation beyond the PR gate; the nightly export smoke is
+  configured separately in `.github/workflows/`.
 
 Because v1 has no hashing pipeline, an empty `content_hash` means "any hash for
 this version" in `find_exact()` and `load_map()`. The exact-hash contract becomes
@@ -785,8 +786,10 @@ ui/
 └── map_browser/   # minimal v1 map browser
 
 tests/
-├── run_tests.gd   # minimal headless test runner
-└── maps/          # map-loader test content + test catalog
+├── unit/          # pure logic, including system/maploader
+├── integration/   # scenes, signals, loader lifecycle
+├── content/       # catalog and export validation
+└── fixtures/      # test catalog, test maps, shared resources
 ```
 
 `system/maploader` must not reference `game/`, multiplayer, or UI.
@@ -816,7 +819,7 @@ Test content lives outside the built-in content tree and is excluded from
 exports:
 
 ```text
-tests/maps/
+tests/fixtures/maps/
 ├── catalog.tres
 └── test_box/
     ├── manifest.tres
@@ -831,17 +834,16 @@ runtime strings, so Godot does not treat them as resource dependencies. The
 export preset must use **Export all resources in the project** so
 `catalog.tres`, `manifest.tres`, map scenes, and thumbnails are included.
 
-The export preset must also exclude `tests/*`; export-all would otherwise ship
-the test catalog and test maps.
+The export preset must exclude `tests/*`, `reports/*`, and
+`addons/gdUnit4/*`; export-all would otherwise ship the test catalog, test maps,
+and the test framework.
 
-Add a local build-time validation script that checks every built-in catalog
-entry, scene, and thumbnail with `ResourceLoader.exists()`, and an exported-build
-smoke test that loads the built-in catalog and resolves every entry. CI
-enforcement of these checks is handled by the separate CI workstream, not this
-system.
+Content validation lives in `tests/content/` and runs with the PR gate. The
+nightly workflow exports a build and smoke-tests that every built-in catalog
+entry resolves in the packaged game.
 
 If build size becomes an issue later, switch to explicit export filters plus the
-same validation script.
+same validation.
 
 ## Non-goals
 
@@ -882,9 +884,9 @@ same validation script.
 
 ## Test plan
 
-Automated, headless where possible. v1 uses a minimal GDScript runner
-(`tests/run_tests.gd`, invoked through `scripts/run-tests.ps1`) with no
-third-party addon. CI is handled separately.
+Automated, headless where possible. v1 uses [gdUnit4](testing.md): unit tests
+under `tests/unit/`, lifecycle tests under `tests/integration/`, and fixture
+validation under `tests/content/`. Both tiers run in the PR gate.
 
 ### v1
 
@@ -918,7 +920,7 @@ third-party addon. CI is handled separately.
 | Thumbnail missing | `load_thumbnail()` returns `null`. |
 | Thumbnail cache | Repeated calls return the cached texture. |
 | Thumbnail cache invalidation | `refresh()` clears the cache. |
-| Test catalog | Repository constructed with `tests/maps/catalog.tres` loads `test_box`. |
+| Test catalog | Repository constructed with `tests/fixtures/maps/catalog.tres` loads `test_box`. |
 
 ### Deferred (with their workstreams)
 
@@ -930,10 +932,10 @@ third-party addon. CI is handled separately.
 | Installed thumbnail sidecar | `load_thumbnail()` works without mounting the pack. |
 | Repository source precedence | Built-in wins for equal versions; installed entries remain findable by exact hash. |
 | Content hash | CI recomputes the manifest hash and fails on drift. |
-| Exported build | Export-all plus `tests/*` exclusion; every built-in catalog entry resolves. |
+| Exported build | Export-all plus `tests/*`, `reports/*`, and `addons/gdUnit4/*` exclusion; every built-in catalog entry resolves. |
 
-Test content: `tests/maps/test_box/` with a simple `MapScene`, two spawn points,
-one named marker, and a manifest that carries a synthetic non-empty
+Test content: `tests/fixtures/maps/test_box/` with a simple `MapScene`, two
+spawn points, one named marker, and a manifest that carries a synthetic non-empty
 `content_hash` for the mismatch tests.
 
 ## Decisions log
@@ -955,13 +957,13 @@ one named marker, and a manifest that carries a synthetic non-empty
 | Duplicate policy | Keep entries with the same version but different hashes (warned, not invalid); `find_exact()` is hash-authoritative; built-in preferred for browsing. |
 | Content hash | Deferred. Field reserved and empty in v1; exact-hash matching activates when the hashing workstream lands. The future hash is canonical and map-root-relative, not raw file bytes. |
 | Path schema | One `MapManifest`; all paths are plain runtime `String`s. |
-| Export | Export all resources in the project; exclude `tests/*`; validate and smoke-test exported builds. CI enforcement is a separate workstream. |
+| Export | Export all resources in the project; exclude `tests/*`, `reports/*`, and `addons/gdUnit4/*`; validate and smoke-test exported builds in the nightly workflow. |
 | Gamemode access | `LoadedMap` + `MapScene` read API; `apply_setup()` is reserved and not called in v1. |
 | Thumbnails | Sidecar outside packs; synchronous `load_thumbnail()` with repository cache cleared by `refresh()`; callers batch. |
 | Map assets | Map-owned assets are co-located under `game/maps/<map_id>/` so packs can be self-contained; shared assets stay in `assets/`. |
 | Built-in catalog `format_version` | Unknown value is a hard error; the catalog is refused rather than silently emptied. |
 | Loader cache mode | `CACHE_MODE_REUSE` for threaded scene loads in v1. |
-| Tests | Minimal headless GDScript runner under `tests/`; no third-party addon; CI handled separately. |
-| Test content | `tests/maps/` with a separate test catalog. |
+| Tests | gdUnit4 6.2.3; tiers under `tests/`; PR gate runs parse, unit, and integration. |
+| Test content | `tests/fixtures/maps/` with a separate test catalog. |
 | Persistence | Godot Resources: `MapCatalog` + `MapManifest`; manifests are dependency-free. |
 | Scene transitions | Never used for maps. |

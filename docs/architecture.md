@@ -23,7 +23,15 @@ Holds game logic. Most of it will build on top of the systems created in `system
 Built-in map content lives in `game/maps/<map_id>/` (scene, manifest, thumbnail, and map-owned assets) so that map packs can be self-contained later. This is the exception to the `assets/` rule: assets used only by one map stay with that map.
 
 ### `tests/`
-Holds test fixtures and the headless test runner. Test content (for example `tests/maps/`) is excluded from exports.
+Holds all automated tests and fixtures, organized by tier:
+
+- `unit/` - pure logic and contracts, no scene tree
+- `integration/` - scenes, signals, lifecycle, and UI wiring
+- `content/` - map manifests, catalogs, and export rules
+- `fixtures/` - shared test scenes, resources, and test maps
+
+Tests use gdUnit4 and run headless. See [testing.md](testing.md). The whole
+`tests/` tree, `reports/`, and `addons/gdUnit4/` are excluded from exports.
 
 ### `ui/`
 Holds everything UI related. 
@@ -42,4 +50,6 @@ More detailed UI patterns will be documented as they evolve.
 - **Reusability**: Systems in `system/` should be portable
 - **Separation of concerns**: Clear boundaries between systems, game logic, and UI
 - **Signal-driven UI**: UI updates reactively via signals from game/systems
+- **Testability**: Systems expose observable state, signals, and endpoints; avoid
+  hidden global state and direct `game/`/`ui/` dependencies from `system/`
 - **Multiplayer-ready**: Architecture should leave room for multiplayer (see [multiplayer.md](multiplayer.md))

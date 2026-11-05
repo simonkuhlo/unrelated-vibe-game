@@ -20,6 +20,10 @@ config/icon="res://assets/icon.svg"
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
 
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/gdUnit4/plugin.cfg")
+
 [file_customization]
 
 folder_colors={
@@ -28,6 +32,15 @@ folder_colors={
 "res://system/": "orange",
 "res://ui/": "green"
 }
+
+[gdunit4]
+
+settings/common/update_notification_enabled=false
+settings/test/test_lookup_folder="tests"
+settings/test/test_timeout_seconds=60
+report/godot/push_error=true
+report/godot/script_error=true
+report/verbose_orphans=true
 
 [physics]
 

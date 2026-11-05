@@ -12,3 +12,29 @@ This project uses an issue-driven workflow. See [AGENTS.md](AGENTS.md) for detai
 
 ### Merge Strategy
 Use **Squash and merge** to keep `main` history clean.
+
+## Testing
+
+Run the pre-PR gate before opening a pull request:
+
+```powershell
+.\scripts\verify.ps1
+```
+
+It imports the project, parses all first-party scripts, boots the main scene,
+and runs the gdUnit4 suites. Faster loops:
+
+```powershell
+.\scripts\test.ps1 -Tier unit
+.\scripts\test.ps1 -Path tests/unit/smoke/test_framework_smoke.gd
+```
+
+Policy:
+
+- Behavior changes include tests; bug fixes include a regression test.
+- If automation is impractical, explain why in the PR and record exact manual
+  steps and expected results.
+- Never weaken tests or CI to get a green build.
+
+See [docs/testing.md](docs/testing.md) for tiers, determinism rules, and the
+framework upgrade procedure.
