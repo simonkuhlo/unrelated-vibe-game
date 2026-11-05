@@ -161,12 +161,19 @@ Read the current body first and preserve rules you do not intend to change.
 
 ## Verifying the gate
 
+Failure propagation was verified before merge on throwaway PR #25: a suite with
+`assert_bool(true).is_false()` made `test` fail (gdUnit4 exit `100`), `static`
+stay green, and the aggregate `CI` gate fail. The PR and branch were deleted
+afterward. This proves the gate cannot pass while a suite fails; it does not by
+itself prove a merge is blocked until `CI` is required by branch protection.
+
 Once `CI` is required, prove it actually blocks merges:
 
 1. Open a throwaway branch with a deliberately failing test (for example,
    `assert_that(true).is_false()`).
 2. Open a pull request and confirm the `CI` check fails.
-3. Close the pull request and delete the branch.
+3. Confirm the merge button is disabled, then close the pull request and delete
+   the branch.
 
 Also confirm the zero-test guard: delete or rename every `test_*.gd`, push, and
 verify `test.ps1` fails instead of reporting a green run.
