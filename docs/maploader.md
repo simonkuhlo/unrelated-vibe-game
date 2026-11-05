@@ -1,6 +1,7 @@
 # Map Loader
 
-**Status:** Design / contracts. No implementation yet.
+**Status:** Partially implemented. Map data and the built-in repository (#12) are
+implemented; the loader, map content, and UI are pending.
 
 This document defines the map loader system: the client-side map database, the
 map loading lifecycle, and the contracts that the future multiplayer session and
@@ -313,6 +314,11 @@ system allowed to free it. Consumers must not keep a `LoadedMap` reference after
 The repository is the client's local map database. It is **app-scoped** and
 shared by the map browser UI and any session. `Main` creates it, calls
 `refresh()` at startup, and injects it into the session and UI.
+
+`refresh()` always emits `catalog_changed()`, even when the repository is empty
+or a catalog is refused. Thumbnail loading bypasses Godot's engine-wide resource
+cache so the repository's path cache is the only cache; `refresh()` therefore
+releases cached thumbnails deterministically.
 
 ### Sources
 

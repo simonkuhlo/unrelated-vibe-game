@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MapManifest" format=3]
+
+[ext_resource type="Script" path="res://system/maploader/map_manifest.gd" id="1_5p01y"]
+
+[resource]
+script = ExtResource("1_5p01y")
+map_id = &"invalid_content_hash"
+version = "1.0.0"
+content_hash = "sha256:xyz"
+display_name = "Bad content hash"
+scene_path = "res://tests/fixtures/maps/scenes/valid_map.tscn"
+thumbnail_path = "res://tests/fixtures/maps/thumbnails/thumb.svg"
+tags = PackedStringArray()
