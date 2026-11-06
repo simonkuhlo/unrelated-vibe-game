@@ -43,13 +43,23 @@ func refresh() -> void:
 	_thumbnail_cache.clear()
 
 	var seen_keys: Dictionary = {}
-	for source in _builtin_sources():
+	var hashes_by_version: Dictionary = {}
+	for source in _ordered_sources():
+		# Installed sources are described in v1 but load no entries until
+		# downloadable map packs land (see docs/maploader.md).
+		if source.kind != MapCatalogSource.Kind.BUILTIN:
+			continue
 		if source.path.is_empty():
 			continue
 		if not ResourceLoader.exists(source.path):
 			push_warning("MapRepository: skipping missing catalog '%s'" % source.path)
 			continue
-		_collect_catalog(source, _source_rank(source.kind), seen_keys)
+		_collect_catalog(
+			source,
+			_source_rank(source.kind),
+			seen_keys,
+			hashes_by_version
+		)
 
 	_sort_entries()
 	catalog_changed.emit()
@@ -118,18 +128,30 @@ func load_thumbnail(manifest: MapManifest) -> Texture2D:
 	return texture
 
 
-func _builtin_sources() -> Array[MapCatalogSource]:
+## Sources in precedence order. Source kind, not construction order, decides
+## which entry wins when two sources describe the same content.
+func _ordered_sources() -> Array[MapCatalogSource]:
 	var result: Array[MapCatalogSource] = []
 	for source in _sources:
-		if source != null and source.kind == MapCatalogSource.Kind.BUILTIN:
+		if source != null:
 			result.append(source)
+	result.sort_custom(_is_source_before)
 	return result
+
+
+func _is_source_before(a: MapCatalogSource, b: MapCatalogSource) -> bool:
+	var a_rank := _source_rank(a.kind)
+	var b_rank := _source_rank(b.kind)
+	if a_rank != b_rank:
+		return a_rank < b_rank
+	return a.path < b.path
 
 
 func _collect_catalog(
 	source: MapCatalogSource,
 	source_rank: int,
-	seen_keys: Dictionary
+	seen_keys: Dictionary,
+	hashes_by_version: Dictionary
 ) -> void:
 	var resource := ResourceLoader.load(source.path, "", ResourceLoader.CACHE_MODE_IGNORE)
 	if resource == null:
@@ -151,14 +173,15 @@ func _collect_catalog(
 		if manifest == null:
 			push_warning("MapRepository: dropping null manifest entry in '%s'" % source.path)
 			continue
-		_accept_manifest(manifest, source_rank, source.path, seen_keys)
+		_accept_manifest(manifest, source_rank, source.path, seen_keys, hashes_by_version)
 
 
 func _accept_manifest(
 	manifest: MapManifest,
 	source_rank: int,
 	catalog_path: String,
-	seen_keys: Dictionary
+	seen_keys: Dictionary,
+	hashes_by_version: Dictionary
 ) -> void:
 	var problems := _validate_manifest(manifest)
 	if not problems.is_empty():
@@ -173,6 +196,10 @@ func _accept_manifest(
 		)
 		return
 
+	var key := _dedupe_key(manifest)
+	if seen_keys.has(key):
+		return
+
 	if source_rank == _SOURCE_RANK_BUILTIN and not ResourceLoader.exists(manifest.scene_path):
 		push_error(
 			"MapRepository: built-in map '%s' version '%s' scene not found: %s"
@@ -180,29 +207,30 @@ func _accept_manifest(
 		)
 		return
 
-	var key := _dedupe_key(manifest)
-	if seen_keys.has(key):
-		return
-
-	if _has_other_hash(manifest):
+	if _has_other_hash(manifest, hashes_by_version):
 		push_warning(
 			"MapRepository: map '%s' version '%s' has multiple content hashes"
 			% [String(manifest.map_id), manifest.version]
 		)
 
 	seen_keys[key] = true
+	_remember_hash(manifest, hashes_by_version)
 	_entries.append(_Entry.new(manifest, source_rank))
 
 
-func _has_other_hash(manifest: MapManifest) -> bool:
-	for entry in _entries:
-		if entry.manifest.map_id != manifest.map_id:
-			continue
-		if entry.manifest.version != manifest.version:
-			continue
-		if entry.manifest.content_hash != manifest.content_hash:
+func _has_other_hash(manifest: MapManifest, hashes_by_version: Dictionary) -> bool:
+	var seen_hashes: Dictionary = hashes_by_version.get(_version_key(manifest), {})
+	for seen_hash in seen_hashes:
+		if seen_hash != manifest.content_hash:
 			return true
 	return false
+
+
+func _remember_hash(manifest: MapManifest, hashes_by_version: Dictionary) -> void:
+	var version_key := _version_key(manifest)
+	var seen_hashes: Dictionary = hashes_by_version.get(version_key, {})
+	seen_hashes[manifest.content_hash] = true
+	hashes_by_version[version_key] = seen_hashes
 
 
 func _sort_entries() -> void:
@@ -234,8 +262,12 @@ static func _source_rank(kind: MapCatalogSource.Kind) -> int:
 	return _SOURCE_RANK_INSTALLED
 
 
+static func _version_key(manifest: MapManifest) -> String:
+	return "%s|%s" % [String(manifest.map_id), manifest.version]
+
+
 static func _dedupe_key(manifest: MapManifest) -> String:
-	return "%s|%s|%s" % [String(manifest.map_id), manifest.version, manifest.content_hash]
+	return "%s|%s" % [_version_key(manifest), manifest.content_hash]
 
 
 static func _validate_manifest(manifest: MapManifest) -> PackedStringArray:

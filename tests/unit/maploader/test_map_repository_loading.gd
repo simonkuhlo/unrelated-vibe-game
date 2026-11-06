@@ -11,7 +11,9 @@ const INVALID_PACKAGE_HASH_CATALOG := "res://tests/fixtures/maps/repository/cata
 const INVALID_PLAYER_RANGE_CATALOG := "res://tests/fixtures/maps/repository/catalog_invalid_player_range.tres"
 const EMPTY_SCENE_PATH_CATALOG := "res://tests/fixtures/maps/repository/catalog_empty_scene_path.tres"
 const MISSING_SCENE_CATALOG := "res://tests/fixtures/maps/repository/catalog_missing_scene.tres"
-const CANONICAL_TEST_CATALOG := "res://tests/fixtures/maps/catalog.tres"
+const EMPTY_CATALOG := "res://tests/fixtures/maps/repository/catalog_empty.tres"
+const MIXED_CATALOG := "res://tests/fixtures/maps/repository/catalog_mixed.tres"
+const MANIFEST_AS_CATALOG := "res://tests/fixtures/maps/repository/manifests/queries/bravo_1_0_0.tres"
 const MISSING_CATALOG := "res://tests/fixtures/maps/does_not_exist.tres"
 
 const HASH_A := "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
@@ -28,8 +30,8 @@ func test_loads_builtin_catalog() -> void:
 	assert_str(repository.find(&"alpha").version).is_equal("1.10.0")
 
 
-func test_canonical_test_catalog_loads() -> void:
-	var repository := _repository(CANONICAL_TEST_CATALOG)
+func test_empty_catalog_is_valid() -> void:
+	var repository := _repository(EMPTY_CATALOG)
 
 	repository.refresh()
 
@@ -180,6 +182,55 @@ func test_missing_builtin_scene_is_dropped_with_error() -> void:
 		)
 
 	assert_that(repository.list()).is_empty()
+
+
+func test_mixed_catalog_keeps_valid_entries() -> void:
+	var repository := _repository(MIXED_CATALOG)
+
+	await assert_error(func() -> void: repository.refresh()) \
+		.is_push_warning(_invalid_warning(
+			"Bad-Id", "1.0.0", MIXED_CATALOG, "map_id must match ^[a-z0-9_]+$"
+		))
+
+	assert_that(repository.list()).has_size(1)
+	assert_str(repository.find(&"bravo").display_name).is_equal("Bravo 1.0.0")
+
+
+func test_non_catalog_resource_is_refused() -> void:
+	var repository := _repository(MANIFEST_AS_CATALOG)
+
+	await assert_error(func() -> void: repository.refresh()) \
+		.is_push_warning("MapRepository: '%s' is not a MapCatalog" % MANIFEST_AS_CATALOG)
+
+	assert_that(repository.list()).is_empty()
+
+
+func test_installed_source_does_not_shadow_builtin() -> void:
+	var sources: Array[MapCatalogSource] = [
+		MapCatalogSource.new(DUPLICATES_CATALOG, MapCatalogSource.Kind.INSTALLED),
+		MapCatalogSource.new(QUERY_CATALOG, MapCatalogSource.Kind.BUILTIN),
+	]
+	var repository := MapRepository.new(sources)
+
+	repository.refresh()
+
+	assert_that(repository.list()).has_size(6)
+	assert_str(repository.find(&"alpha").version).is_equal("1.10.0")
+
+
+func test_multiple_builtin_sources_are_merged() -> void:
+	var sources: Array[MapCatalogSource] = [
+		MapCatalogSource.new(QUERY_CATALOG, MapCatalogSource.Kind.BUILTIN),
+		MapCatalogSource.new(DUPLICATES_CATALOG, MapCatalogSource.Kind.BUILTIN),
+	]
+	var repository := MapRepository.new(sources)
+
+	await assert_error(func() -> void: repository.refresh()) \
+		.is_push_warning("MapRepository: map 'dupe' version '1.0.0' has multiple content hashes")
+
+	assert_that(repository.list()).has_size(8)
+	assert_str(repository.find(&"alpha").version).is_equal("1.10.0")
+	assert_str(repository.find(&"dupe").content_hash).is_equal(HASH_A)
 
 
 func test_duplicate_hashes_are_deduplicated_and_different_hashes_kept() -> void:
