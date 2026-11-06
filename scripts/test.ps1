@@ -77,10 +77,14 @@ Write-Host "Running tests in: $($targets -join ', ')" -ForegroundColor Cyan
 # treats native stderr as a terminating error when ErrorActionPreference is
 # Stop, so relax it for the test process and restore it afterwards.
 $previousErrorAction = $ErrorActionPreference
-$ErrorActionPreference = "Continue"
-& $godot @godotArgs 2>&1 | Out-Host
+try {
+    $ErrorActionPreference = "Continue"
+    & $godot @godotArgs 2>&1 | Out-Host
+}
+finally {
+    $ErrorActionPreference = $previousErrorAction
+}
 $exitCode = $LASTEXITCODE
-$ErrorActionPreference = $previousErrorAction
 
 $report = Get-ChildItem -LiteralPath $reportsDir -Recurse -Filter "results.xml" -ErrorAction SilentlyContinue |
     Sort-Object LastWriteTimeUtc -Descending |
