@@ -345,7 +345,9 @@ func _init(p_path: String, p_kind: Kind) -> void:
 ```
 
 Empty or missing paths are skipped; a repository with no catalogs is valid but
-empty. Source kind, not catalog order, defines precedence.
+empty. Source kind, not catalog order, defines precedence. Sources are processed
+in source-rank order, then by path, so descriptor order cannot change which
+entry wins.
 
 v1 constructs the repository with the built-in descriptor only.
 
@@ -926,7 +928,7 @@ validation under `tests/content/`. Both tiers run in the PR gate.
 | Thumbnail missing | `load_thumbnail()` returns `null`. |
 | Thumbnail cache | Repeated calls return the cached texture. |
 | Thumbnail cache invalidation | `refresh()` clears the cache. |
-| Test catalog | Repository constructed with `tests/fixtures/maps/catalog.tres` loads `test_box`. |
+| Test catalog | Repository constructed with `tests/fixtures/maps/catalog.tres` loads `test_box` (content and assertion added in [#18](https://github.com/simonkuhlo/unrelated-vibe-game/issues/18)). |
 
 ### Deferred (with their workstreams)
 
