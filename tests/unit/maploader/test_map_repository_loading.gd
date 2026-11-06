@@ -15,6 +15,8 @@ const EMPTY_CATALOG := "res://tests/fixtures/maps/repository/catalog_empty.tres"
 const MIXED_CATALOG := "res://tests/fixtures/maps/repository/catalog_mixed.tres"
 const MANIFEST_AS_CATALOG := "res://tests/fixtures/maps/repository/manifests/queries/bravo_1_0_0.tres"
 const MISSING_CATALOG := "res://tests/fixtures/maps/does_not_exist.tres"
+const ORDERING_A_CATALOG := "res://tests/fixtures/maps/repository/catalog_ordering_a.tres"
+const ORDERING_B_CATALOG := "res://tests/fixtures/maps/repository/catalog_ordering_b.tres"
 
 const HASH_A := "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 const HASH_B := "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
@@ -205,17 +207,33 @@ func test_non_catalog_resource_is_refused() -> void:
 	assert_that(repository.list()).is_empty()
 
 
-func test_installed_source_does_not_shadow_builtin() -> void:
-	var sources: Array[MapCatalogSource] = [
-		MapCatalogSource.new(DUPLICATES_CATALOG, MapCatalogSource.Kind.INSTALLED),
-		MapCatalogSource.new(QUERY_CATALOG, MapCatalogSource.Kind.BUILTIN),
-	]
-	var repository := MapRepository.new(sources)
+func test_source_path_order_breaks_duplicate_ties() -> void:
+	# Descriptor order is reversed on purpose: the lexicographically smaller
+	# catalog path must win the identical-key dedupe.
+	var repository := MapRepository.new(
+		_ordering_sources(ORDERING_B_CATALOG, ORDERING_A_CATALOG)
+	)
 
 	repository.refresh()
 
-	assert_that(repository.list()).has_size(6)
-	assert_str(repository.find(&"alpha").version).is_equal("1.10.0")
+	assert_that(repository.list()).has_size(1)
+	assert_str(repository.find(&"ordering_dupe").display_name).is_equal("Ordering A")
+
+
+func test_source_ordering_is_independent_of_descriptor_order() -> void:
+	var forward := MapRepository.new(
+		_ordering_sources(ORDERING_A_CATALOG, ORDERING_B_CATALOG)
+	)
+	var reverse := MapRepository.new(
+		_ordering_sources(ORDERING_B_CATALOG, ORDERING_A_CATALOG)
+	)
+
+	forward.refresh()
+	reverse.refresh()
+
+	assert_that(_list_signature(forward)).is_equal(_list_signature(reverse))
+	assert_str(forward.find(&"ordering_dupe").display_name).is_equal("Ordering A")
+	assert_str(reverse.find(&"ordering_dupe").display_name).is_equal("Ordering A")
 
 
 func test_multiple_builtin_sources_are_merged() -> void:
@@ -242,6 +260,25 @@ func test_duplicate_hashes_are_deduplicated_and_different_hashes_kept() -> void:
 	assert_that(repository.list()).has_size(2)
 	assert_str(repository.find_exact(&"dupe", "1.0.0", HASH_A).content_hash).is_equal(HASH_A)
 	assert_str(repository.find_exact(&"dupe", "1.0.0", HASH_B).content_hash).is_equal(HASH_B)
+
+
+func _ordering_sources(first: String, second: String) -> Array[MapCatalogSource]:
+	var sources: Array[MapCatalogSource] = [
+		MapCatalogSource.new(first, MapCatalogSource.Kind.BUILTIN),
+		MapCatalogSource.new(second, MapCatalogSource.Kind.BUILTIN),
+	]
+	return sources
+
+
+func _list_signature(repository: MapRepository) -> Array[String]:
+	var signature: Array[String] = []
+	for manifest in repository.list():
+		signature.append("%s@%s|%s" % [
+			String(manifest.map_id),
+			manifest.version,
+			manifest.content_hash,
+		])
+	return signature
 
 
 func _repository(

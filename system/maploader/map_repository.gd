@@ -74,6 +74,7 @@ func list() -> Array[MapManifest]:
 
 
 ## Preferred entry for a map id (highest semver; built-in wins ties).
+## Relies on the order applied by [method _sort_entries].
 func find(map_id: StringName) -> MapManifest:
 	for entry in _entries:
 		if entry.manifest.map_id == map_id:
@@ -82,6 +83,7 @@ func find(map_id: StringName) -> MapManifest:
 
 
 ## Preferred entry for a specific version, ignoring hash.
+## Relies on the order applied by [method _sort_entries].
 func find_version(map_id: StringName, version: String) -> MapManifest:
 	for entry in _entries:
 		if entry.manifest.map_id == map_id and entry.manifest.version == version:

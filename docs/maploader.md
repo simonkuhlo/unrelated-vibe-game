@@ -910,6 +910,7 @@ validation under `tests/content/`. Both tiers run in the PR gate.
 | Built-in catalog with unknown `format_version` | Repository refuses the catalog and logs an error; no built-in entries. |
 | Built-in entry with missing scene | Entry dropped with an error. |
 | Duplicate same version, different hash | Both entries retained; warning; `find_exact()` finds the matching hash. |
+| Source descriptor order | Reversing descriptor order does not change `list()`/`find()`; identical-key duplicates resolve to the lexicographically smaller catalog path. |
 | Successful load | State reaches `READY`, `current` is set, host has one child. |
 | Successful unload | Host is empty, `current` is `null`, state is `IDLE`. |
 | Missing map | `load_failed(NOT_FOUND)`, host empty. |
