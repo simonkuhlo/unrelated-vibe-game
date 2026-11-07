@@ -1,6 +1,7 @@
 # Map Loader
 
-**Status:** Design / contracts. No implementation yet.
+**Status:** Partially implemented. Map data and the built-in repository (#12) are
+implemented; the loader, map content, and UI are pending.
 
 This document defines the map loader system: the client-side map database, the
 map loading lifecycle, and the contracts that the future multiplayer session and
@@ -314,6 +315,11 @@ The repository is the client's local map database. It is **app-scoped** and
 shared by the map browser UI and any session. `Main` creates it, calls
 `refresh()` at startup, and injects it into the session and UI.
 
+`refresh()` always emits `catalog_changed()`, even when the repository is empty
+or a catalog is refused. Thumbnail loading bypasses Godot's engine-wide resource
+cache so the repository's path cache is the only cache; `refresh()` therefore
+releases cached thumbnails deterministically.
+
 ### Sources
 
 | Source | Catalog path | Persistence | Notes |
@@ -339,7 +345,9 @@ func _init(p_path: String, p_kind: Kind) -> void:
 ```
 
 Empty or missing paths are skipped; a repository with no catalogs is valid but
-empty. Source kind, not catalog order, defines precedence.
+empty. Source kind, not catalog order, defines precedence. Sources are processed
+in source-rank order, then by path, so descriptor order cannot change which
+entry wins.
 
 v1 constructs the repository with the built-in descriptor only.
 
@@ -413,8 +421,9 @@ The repository validates metadata only:
   built-in wins.
 - `list()` order is deterministic: `map_id` ascending, version descending, then
   source rank (built-in before installed), then `content_hash` ascending.
-- Built-in entries are checked with `ResourceLoader.exists(scene_path)`; a missing
-  scene drops the entry with an error.
+- Built-in entries are checked with
+  `ResourceLoader.exists(scene_path, "PackedScene")`; a missing scene or a path
+  that is not a `PackedScene` drops the entry with an error.
 - Installed entries are not scene-checked until their pack is mounted (future).
   The loader reports `SCENE_MISSING`, `PACK_MISSING`, or `PACK_LOAD_FAILED` at
   load time.
@@ -469,7 +478,10 @@ func has_exact(
 func load_thumbnail(manifest: MapManifest) -> Texture2D
 ```
 
-The repository does not load scenes and does not mutate game state.
+The repository does not load scenes and does not mutate game state. Manifests
+returned by `list()`, `find()`, `find_version()`, and `find_exact()` are shared,
+read-only resources: consumers must not mutate them, because query results rely
+on the repository's validated sort order until the next `refresh()`.
 
 ## Map loader
 
@@ -882,6 +894,9 @@ same validation.
   preparation.
 - **Version ranges.** Explicitly rejected for now; exact matching only.
 
+Optional, non-blocking cleanups from the repository review are tracked in
+[#27](https://github.com/simonkuhlo/unrelated-vibe-game/issues/27).
+
 ## Test plan
 
 Automated, headless where possible. v1 uses [gdUnit4](testing.md): unit tests
@@ -901,7 +916,9 @@ validation under `tests/content/`. Both tiers run in the PR gate.
 | Invalid version / invalid hash format | Invalid entry dropped; warning emitted. |
 | Built-in catalog with unknown `format_version` | Repository refuses the catalog and logs an error; no built-in entries. |
 | Built-in entry with missing scene | Entry dropped with an error. |
+| Built-in entry whose `scene_path` is not a `PackedScene` | Entry dropped with an error. |
 | Duplicate same version, different hash | Both entries retained; warning; `find_exact()` finds the matching hash. |
+| Source descriptor order | Reversing descriptor order does not change `list()`/`find()`; identical-key duplicates resolve to the lexicographically smaller catalog path. |
 | Successful load | State reaches `READY`, `current` is set, host has one child. |
 | Successful unload | Host is empty, `current` is `null`, state is `IDLE`. |
 | Missing map | `load_failed(NOT_FOUND)`, host empty. |
@@ -920,7 +937,7 @@ validation under `tests/content/`. Both tiers run in the PR gate.
 | Thumbnail missing | `load_thumbnail()` returns `null`. |
 | Thumbnail cache | Repeated calls return the cached texture. |
 | Thumbnail cache invalidation | `refresh()` clears the cache. |
-| Test catalog | Repository constructed with `tests/fixtures/maps/catalog.tres` loads `test_box`. |
+| Test catalog | Repository constructed with `tests/fixtures/maps/catalog.tres` loads `test_box` (content and assertion added in [#18](https://github.com/simonkuhlo/unrelated-vibe-game/issues/18)). |
 
 ### Deferred (with their workstreams)
 

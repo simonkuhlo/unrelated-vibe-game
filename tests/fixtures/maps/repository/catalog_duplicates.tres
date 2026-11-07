@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="MapCatalog" format=3]
+
+[ext_resource type="Script" path="res://system/maploader/map_manifest.gd" id="1_8uiyq"]
+[ext_resource type="Resource" path="res://tests/fixtures/maps/repository/manifests/duplicates/dupe_hash_a.tres" id="2_umdk0"]
+[ext_resource type="Resource" path="res://tests/fixtures/maps/repository/manifests/duplicates/dupe_hash_b.tres" id="3_q7a6s"]
+[ext_resource type="Resource" path="res://tests/fixtures/maps/repository/manifests/duplicates/dupe_hash_a_copy.tres" id="4_gfj8j"]
+[ext_resource type="Script" path="res://system/maploader/map_catalog.gd" id="5_s8yp5"]
+
+[resource]
+script = ExtResource("5_s8yp5")
+entries = Array[ExtResource("1_8uiyq")]([ExtResource("2_umdk0"), ExtResource("3_q7a6s"), ExtResource("4_gfj8j")])

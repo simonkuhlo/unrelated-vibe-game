@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="MapManifest" format=3]
+
+[ext_resource type="Script" path="res://system/maploader/map_manifest.gd" id="1_psovq"]
+
+[resource]
+script = ExtResource("1_psovq")
+map_id = &"dupe"
+version = "1.0.0"
+content_hash = "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+display_name = "Dupe B"
+scene_path = "res://tests/fixtures/maps/scenes/valid_map.tscn"
+thumbnail_path = "res://tests/fixtures/maps/thumbnails/thumb.svg"
+tags = PackedStringArray()
