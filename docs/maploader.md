@@ -265,9 +265,10 @@ func apply_setup(_config: Dictionary) -> void:
 	pass
 ```
 
-`get_spawn_points()` reads `global_transform`, so the map must be inside the
-tree when it is called. The loader guarantees this; calling it on a detached
-instance is a programming error.
+`get_spawn_points()` reads each spawn point's `global_transform`, so the map
+must be inside the tree when a `SpawnPoints/` container is present. The loader
+guarantees this; reading spawn points on a detached instance is a programming
+error.
 
 **Marker convention:**
 
@@ -925,7 +926,7 @@ validation under `tests/content/`. Both tiers run in the PR gate.
 | Built-in entry whose `scene_path` is not a `PackedScene` | Entry dropped with an error. |
 | Duplicate same version, different hash | Both entries retained; warning; `find_exact()` finds the matching hash. |
 | Source descriptor order | Reversing descriptor order does not change `list()`/`find()`; identical-key duplicates resolve to the lexicographically smaller catalog path. |
-| `MapScene` spawn points | Returns world-space transforms for `SpawnPoints/` `Node3D` children; empty when the container is absent. |
+| `MapScene` spawn points | Returns world-space transforms for `SpawnPoints/` `Node3D` children; empty when the container is absent or has no `Node3D` children. |
 | `MapScene` marker lookup | Returns the named `Markers/` `Node3D`; `null` when missing or not a `Node3D`. |
 | `MapScene` default bounds | Returns an empty `AABB()`. |
 | `MapScene.apply_setup()` no-op | Calling it changes no map state; the loader never calls it in v1. |

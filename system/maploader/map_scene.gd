@@ -18,7 +18,8 @@ extends Node3D
 ##
 ## Reads the [Node3D] children of the optional [code]SpawnPoints/[/code]
 ## container in child order. Returns an empty array when the container is
-## missing. The map must be inside the tree; the loader guarantees this.
+## missing. When the container is present, the map must be inside the tree; the
+## loader guarantees this.
 func get_spawn_points() -> Array[Transform3D]:
 	var points: Array[Transform3D] = []
 	var container := get_node_or_null(^"SpawnPoints")

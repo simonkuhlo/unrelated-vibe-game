@@ -10,6 +10,15 @@ func test_spawn_points_empty_without_container() -> void:
 	assert_array(map.get_spawn_points()).is_empty()
 
 
+func test_spawn_points_empty_with_container() -> void:
+	var map := auto_free(MapScene.new()) as MapScene
+	var container := auto_free(Node3D.new()) as Node3D
+	container.name = "SpawnPoints"
+	map.add_child(container)
+
+	assert_array(map.get_spawn_points()).is_empty()
+
+
 func test_marker_lookup_returns_named_node3d() -> void:
 	var map := auto_free(MapScene.new()) as MapScene
 	var markers := auto_free(Node3D.new()) as Node3D
