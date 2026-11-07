@@ -9,9 +9,9 @@ extends RefCounted
 
 signal catalog_changed()
 
-const _MAP_ID_PATTERN := "^[a-z0-9_]+$"
-const _VERSION_PATTERN := "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
-const _HASH_PATTERN := "^sha256:[0-9a-f]{64}$"
+const _MAP_ID_PATTERN := "\\A[a-z0-9_]+\\z"
+const _VERSION_PATTERN := "\\A(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\z"
+const _HASH_PATTERN := "\\Asha256:[0-9a-f]{64}\\z"
 const _SOURCE_RANK_BUILTIN := 0
 const _SOURCE_RANK_INSTALLED := 1
 
@@ -66,6 +66,7 @@ func refresh() -> void:
 
 
 ## All valid entries in deterministic order. May contain multiple versions.
+## Returned manifests are shared, read-only resources: do not mutate them.
 func list() -> Array[MapManifest]:
 	var result: Array[MapManifest] = []
 	for entry in _entries:
@@ -202,9 +203,10 @@ func _accept_manifest(
 	if seen_keys.has(key):
 		return
 
-	if source_rank == _SOURCE_RANK_BUILTIN and not ResourceLoader.exists(manifest.scene_path):
+	if source_rank == _SOURCE_RANK_BUILTIN \
+			and not ResourceLoader.exists(manifest.scene_path, "PackedScene"):
 		push_error(
-			"MapRepository: built-in map '%s' version '%s' scene not found: %s"
+			"MapRepository: built-in map '%s' version '%s' scene not found or not a PackedScene: %s"
 			% [String(manifest.map_id), manifest.version, manifest.scene_path]
 		)
 		return

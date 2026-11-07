@@ -421,8 +421,9 @@ The repository validates metadata only:
   built-in wins.
 - `list()` order is deterministic: `map_id` ascending, version descending, then
   source rank (built-in before installed), then `content_hash` ascending.
-- Built-in entries are checked with `ResourceLoader.exists(scene_path)`; a missing
-  scene drops the entry with an error.
+- Built-in entries are checked with
+  `ResourceLoader.exists(scene_path, "PackedScene")`; a missing scene or a path
+  that is not a `PackedScene` drops the entry with an error.
 - Installed entries are not scene-checked until their pack is mounted (future).
   The loader reports `SCENE_MISSING`, `PACK_MISSING`, or `PACK_LOAD_FAILED` at
   load time.
@@ -477,7 +478,10 @@ func has_exact(
 func load_thumbnail(manifest: MapManifest) -> Texture2D
 ```
 
-The repository does not load scenes and does not mutate game state.
+The repository does not load scenes and does not mutate game state. Manifests
+returned by `list()`, `find()`, `find_version()`, and `find_exact()` are shared,
+read-only resources: consumers must not mutate them, because query results rely
+on the repository's validated sort order until the next `refresh()`.
 
 ## Map loader
 
@@ -890,6 +894,9 @@ same validation.
   preparation.
 - **Version ranges.** Explicitly rejected for now; exact matching only.
 
+Optional, non-blocking cleanups from the repository review are tracked in
+[#27](https://github.com/simonkuhlo/unrelated-vibe-game/issues/27).
+
 ## Test plan
 
 Automated, headless where possible. v1 uses [gdUnit4](testing.md): unit tests
@@ -909,6 +916,7 @@ validation under `tests/content/`. Both tiers run in the PR gate.
 | Invalid version / invalid hash format | Invalid entry dropped; warning emitted. |
 | Built-in catalog with unknown `format_version` | Repository refuses the catalog and logs an error; no built-in entries. |
 | Built-in entry with missing scene | Entry dropped with an error. |
+| Built-in entry whose `scene_path` is not a `PackedScene` | Entry dropped with an error. |
 | Duplicate same version, different hash | Both entries retained; warning; `find_exact()` finds the matching hash. |
 | Source descriptor order | Reversing descriptor order does not change `list()`/`find()`; identical-key duplicates resolve to the lexicographically smaller catalog path. |
 | Successful load | State reaches `READY`, `current` is set, host has one child. |

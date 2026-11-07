@@ -36,6 +36,7 @@ func test_repeated_thumbnail_loads_return_the_cached_texture() -> void:
 	var first := repository.load_thumbnail(manifest)
 	var second := repository.load_thumbnail(manifest)
 
+	assert_that(first).is_not_null()
 	assert_that(second).is_same(first)
 
 
@@ -47,6 +48,8 @@ func test_refresh_clears_the_thumbnail_cache() -> void:
 	repository.refresh()
 	var second := repository.load_thumbnail(manifest)
 
+	assert_that(first).is_not_null()
+	assert_that(second).is_not_null()
 	assert_that(second).is_not_same(first)
 
 

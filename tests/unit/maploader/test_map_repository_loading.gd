@@ -11,6 +11,9 @@ const INVALID_PACKAGE_HASH_CATALOG := "res://tests/fixtures/maps/repository/cata
 const INVALID_PLAYER_RANGE_CATALOG := "res://tests/fixtures/maps/repository/catalog_invalid_player_range.tres"
 const EMPTY_SCENE_PATH_CATALOG := "res://tests/fixtures/maps/repository/catalog_empty_scene_path.tres"
 const MISSING_SCENE_CATALOG := "res://tests/fixtures/maps/repository/catalog_missing_scene.tres"
+const NON_SCENE_PATH_CATALOG := "res://tests/fixtures/maps/repository/catalog_non_scene_path.tres"
+const TRAILING_NEWLINE_CATALOG := "res://tests/fixtures/maps/repository/catalog_trailing_newline.tres"
+const NULL_ENTRY_CATALOG := "res://tests/fixtures/maps/repository/catalog_null_entry.tres"
 const EMPTY_CATALOG := "res://tests/fixtures/maps/repository/catalog_empty.tres"
 const MIXED_CATALOG := "res://tests/fixtures/maps/repository/catalog_mixed.tres"
 const MANIFEST_AS_CATALOG := "res://tests/fixtures/maps/repository/manifests/queries/bravo_1_0_0.tres"
@@ -89,6 +92,8 @@ func test_installed_source_yields_no_entries() -> void:
 
 func test_unknown_builtin_format_version_is_a_hard_error() -> void:
 	var repository := _repository(UNKNOWN_FORMAT_CATALOG)
+	var emissions := [0]
+	repository.catalog_changed.connect(func() -> void: emissions[0] += 1)
 
 	await assert_error(func() -> void: repository.refresh()) \
 		.is_push_error(
@@ -97,6 +102,7 @@ func test_unknown_builtin_format_version_is_a_hard_error() -> void:
 		)
 
 	assert_that(repository.list()).is_empty()
+	assert_int(emissions[0]).is_equal(1)
 
 
 func test_invalid_map_id_is_dropped_with_warning() -> void:
@@ -116,6 +122,20 @@ func test_invalid_version_is_dropped_with_warning() -> void:
 	await assert_error(func() -> void: repository.refresh()) \
 		.is_push_warning(_invalid_warning(
 			"invalid_version", "1.02.0", INVALID_VERSION_CATALOG, "version must be strict numeric semver"
+		))
+
+	assert_that(repository.list()).is_empty()
+
+
+func test_trailing_newline_version_is_dropped_with_warning() -> void:
+	var repository := _repository(TRAILING_NEWLINE_CATALOG)
+
+	await assert_error(func() -> void: repository.refresh()) \
+		.is_push_warning(_invalid_warning(
+			"trailing_newline",
+			"1.0.0\n",
+			TRAILING_NEWLINE_CATALOG,
+			"version must be strict numeric semver"
 		))
 
 	assert_that(repository.list()).is_empty()
@@ -179,8 +199,33 @@ func test_missing_builtin_scene_is_dropped_with_error() -> void:
 
 	await assert_error(func() -> void: repository.refresh()) \
 		.is_push_error(
-			"MapRepository: built-in map 'missing_scene' version '1.0.0' scene not found: "
+			"MapRepository: built-in map 'missing_scene' version '1.0.0' "
+			+ "scene not found or not a PackedScene: "
 			+ "res://tests/fixtures/maps/scenes/does_not_exist.tscn"
+		)
+
+	assert_that(repository.list()).is_empty()
+
+
+func test_non_scene_builtin_path_is_dropped_with_error() -> void:
+	var repository := _repository(NON_SCENE_PATH_CATALOG)
+
+	await assert_error(func() -> void: repository.refresh()) \
+		.is_push_error(
+			"MapRepository: built-in map 'non_scene_path' version '1.0.0' "
+			+ "scene not found or not a PackedScene: "
+			+ "res://tests/fixtures/maps/repository/catalog_empty.tres"
+		)
+
+	assert_that(repository.list()).is_empty()
+
+
+func test_null_manifest_entry_is_dropped_with_warning() -> void:
+	var repository := _repository(NULL_ENTRY_CATALOG)
+
+	await assert_error(func() -> void: repository.refresh()) \
+		.is_push_warning(
+			"MapRepository: dropping null manifest entry in '%s'" % NULL_ENTRY_CATALOG
 		)
 
 	assert_that(repository.list()).is_empty()
