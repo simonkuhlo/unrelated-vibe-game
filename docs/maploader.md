@@ -1,7 +1,8 @@
 # Map Loader
 
-**Status:** Partially implemented. Map data and the built-in repository (#12) are
-implemented; the loader, map content, and UI are pending.
+**Status:** Partially implemented. Map data, the built-in repository (#12), and
+the map scene API (#14) are implemented; the loader, map content, and UI are
+pending.
 
 This document defines the map loader system: the client-side map database, the
 map loading lifecycle, and the contracts that the future multiplayer session and
@@ -264,11 +265,17 @@ func apply_setup(_config: Dictionary) -> void:
 	pass
 ```
 
+`get_spawn_points()` reads each spawn point's `global_transform`, so the map
+must be inside the tree when a `SpawnPoints/` container is present. The loader
+guarantees this; reading spawn points on a detached instance is a programming
+error.
+
 **Marker convention:**
 
-- `SpawnPoints/` contains `Marker3D` children used for generic player spawns.
-- `Markers/` contains `Marker3D` children looked up by node name, e.g.
-  `Markers/RedBase`, `Markers/BlueBase`, `Markers/ObjectiveA`.
+- `SpawnPoints/` contains `Node3D` children (typically `Marker3D`) used for
+  generic player spawns.
+- `Markers/` contains `Node3D` children (typically `Marker3D`) looked up by node
+  name, e.g. `Markers/RedBase`, `Markers/BlueBase`, `Markers/ObjectiveA`.
 - Markers and spawn points are read-only for consumers; do not reparent or
   free them.
 - Marker names such as `RedBase` are a gamemode-level contract, not a generic
@@ -919,6 +926,12 @@ validation under `tests/content/`. Both tiers run in the PR gate.
 | Built-in entry whose `scene_path` is not a `PackedScene` | Entry dropped with an error. |
 | Duplicate same version, different hash | Both entries retained; warning; `find_exact()` finds the matching hash. |
 | Source descriptor order | Reversing descriptor order does not change `list()`/`find()`; identical-key duplicates resolve to the lexicographically smaller catalog path. |
+| `MapScene` spawn points | Returns world-space transforms for `SpawnPoints/` `Node3D` children; empty when the container is absent or has no `Node3D` children. |
+| `MapScene` marker lookup | Returns the named `Markers/` `Node3D`; `null` when missing or not a `Node3D`. |
+| `MapScene` default bounds | Returns an empty `AABB()`. |
+| `MapScene.apply_setup()` no-op | Calling it changes no map state; the loader never calls it in v1. |
+| `LoadedMap` delegation | Manifest is exposed; spawn/marker/bounds/setup calls delegate to the root. |
+| `LoadedMap.is_valid()` | True for a live root; false for a null or freed root. |
 | Successful load | State reaches `READY`, `current` is set, host has one child. |
 | Successful unload | Host is empty, `current` is `null`, state is `IDLE`. |
 | Missing map | `load_failed(NOT_FOUND)`, host empty. |
