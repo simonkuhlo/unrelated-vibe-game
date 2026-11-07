@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="MapCatalog" format=3]
+
+[ext_resource type="Script" path="res://system/maploader/map_manifest.gd" id="1_ropom"]
+[ext_resource type="Resource" path="res://tests/fixtures/maps/repository/manifests/invalid/package_hash.tres" id="2_5ttvb"]
+[ext_resource type="Script" path="res://system/maploader/map_catalog.gd" id="3_kxvw1"]
+
+[resource]
+script = ExtResource("3_kxvw1")
+entries = Array[ExtResource("1_ropom")]([ExtResource("2_5ttvb")])

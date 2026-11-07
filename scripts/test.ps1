@@ -73,7 +73,17 @@ foreach ($target in $targets) {
 }
 
 Write-Host "Running tests in: $($targets -join ', ')" -ForegroundColor Cyan
-& $godot @godotArgs 2>&1 | Out-Host
+# Tests deliberately exercise push_warning()/push_error(). Windows PowerShell
+# treats native stderr as a terminating error when ErrorActionPreference is
+# Stop, so relax it for the test process and restore it afterwards.
+$previousErrorAction = $ErrorActionPreference
+try {
+    $ErrorActionPreference = "Continue"
+    & $godot @godotArgs 2>&1 | Out-Host
+}
+finally {
+    $ErrorActionPreference = $previousErrorAction
+}
 $exitCode = $LASTEXITCODE
 
 $report = Get-ChildItem -LiteralPath $reportsDir -Recurse -Filter "results.xml" -ErrorAction SilentlyContinue |
