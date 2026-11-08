@@ -4,6 +4,23 @@
 the map scene API (#14) are implemented; the loader, map content, and UI are
 pending.
 
+## Implementation status
+
+| Area | Status | Files or issue |
+|---|---|---|
+| Map data model | Implemented | `system/maploader/map_manifest.gd`, `map_catalog.gd`, `map_catalog_source.gd` |
+| Local repository | Implemented | `system/maploader/map_repository.gd` |
+| Map scene API | Implemented | `system/maploader/map_scene.gd`, `loaded_map.gd` |
+| Async loader | Pending | `system/maploader/map_loader.gd` (#13) |
+| Main bootstrap and map browser | Pending | `game/main.gd`, `ui/map_browser/` (#15) |
+| Test map fixtures | Pending | `tests/fixtures/maps/test_box/` (#18) |
+| Content hashing | Pending | #16 |
+| Downloadable packs | Pending | #17 |
+| Map config/setup | Pending | #10 |
+
+If a class or path is listed as pending, do not assume it exists. Follow the
+issue and the repo over this design document.
+
 This document defines the map loader system: the client-side map database, the
 map loading lifecycle, and the contracts that the future multiplayer session and
 gamemode systems use to interact with a loaded map.

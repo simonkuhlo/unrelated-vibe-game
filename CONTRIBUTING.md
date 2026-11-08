@@ -1,5 +1,11 @@
 # Contributing
 
+## Environment
+
+Linux is the primary development environment; CI runs on `ubuntu-latest`.
+Windows works as a fallback. Use PowerShell 7+ (`pwsh`) so local commands match
+CI. On Windows PowerShell, substitute `.\scripts\...` for `pwsh ./scripts/...`.
+
 ## Workflow
 This project uses an issue-driven workflow. See [AGENTS.md](AGENTS.md) for detailed agent instructions.
 
@@ -17,16 +23,16 @@ Use **Squash and merge** to keep `main` history clean.
 
 Run the pre-PR gate before opening a pull request:
 
-```powershell
-.\scripts\verify.ps1
+```bash
+pwsh ./scripts/verify.ps1
 ```
 
 It imports the project, parses all first-party scripts, boots the main scene,
 and runs the gdUnit4 suites. Faster loops:
 
-```powershell
-.\scripts\test.ps1 -Tier unit
-.\scripts\test.ps1 -Path tests/unit/smoke/test_framework_smoke.gd
+```bash
+pwsh ./scripts/test.ps1 -Tier unit
+pwsh ./scripts/test.ps1 -Path tests/unit/smoke/test_framework_smoke.gd
 ```
 
 Policy:
@@ -40,3 +46,12 @@ Policy:
 
 See [docs/testing.md](docs/testing.md) for tiers, determinism rules, and the
 framework upgrade procedure.
+
+## Working with agents
+
+- Less-capable agents start at [docs/agents/README.md](docs/agents/README.md)
+  and follow [docs/agents/issue-workflow.md](docs/agents/issue-workflow.md).
+- Humans directing agents should read
+  [docs/agents/human-guide.md](docs/agents/human-guide.md).
+- Repo-meta work (CI, templates, labels, rulesets, scripts) follows
+  [docs/agents/repo-meta.md](docs/agents/repo-meta.md).

@@ -2,7 +2,7 @@ extends SceneTree
 ## Loads every first-party GDScript file so Godot's parser is the static gate.
 ##
 ## Usage:
-##   godot --headless --path . -s res://scripts/check_scripts.gd
+##   godot --headless --path . -s res://tests/tools/check_scripts.gd
 ##
 ## Third-party code (addons/) and generated folders are skipped: they are pinned
 ## dependencies, not ours to police.

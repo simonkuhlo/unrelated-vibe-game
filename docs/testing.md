@@ -111,21 +111,23 @@ Useful rules:
 
 ```powershell
 # Everything: static checks + unit + integration + content
-.\scripts\verify.ps1
+pwsh ./scripts/verify.ps1
 
 # Fast tier while iterating
-.\scripts\test.ps1 -Tier unit
+pwsh ./scripts/test.ps1 -Tier unit
 
 # One suite or one file
-.\scripts\test.ps1 -Path tests/unit/smoke/test_framework_smoke.gd
+pwsh ./scripts/test.ps1 -Path tests/unit/smoke/test_framework_smoke.gd
 
 # Static checks only
-.\scripts\check.ps1
+pwsh ./scripts/check.ps1
 ```
 
-Scripts resolve Godot from `-GodotBin`, `GODOT_BIN`, `GODOT`, the Steam install
-location, or `PATH`, in that order. They warn when the binary does not match
-`.godot-version`.
+On Windows PowerShell, substitute `.\scripts\...`.
+
+Scripts resolve Godot from `-GodotBin`, `GODOT_BIN`, `GODOT`, common Linux
+install locations, the Steam install location, or `PATH`, in that order. They
+warn when the binary does not match `.godot-version`.
 
 Reports are written to `reports/report_<n>/` (`results.xml` and `index.html`)
 and are gitignored.
@@ -193,7 +195,7 @@ gdUnit4 is pinned. Upgrade deliberately, in a dedicated PR:
 1. Read the release notes and the supported Godot version.
 2. Replace `addons/gdUnit4/` with the new release.
 3. Update the version in this document and `addons/gdUnit4/plugin.cfg`.
-4. Run `.\scripts\verify.ps1` and the nightly export.
+4. Run `pwsh ./scripts/verify.ps1` and the nightly export.
 5. Check whether the `--ignoreHeadlessMode` workaround can be removed (v7+).
 
 Do not run update checks in CI; update notifications are disabled in
