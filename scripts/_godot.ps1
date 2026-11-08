@@ -21,23 +21,36 @@ function Resolve-GodotBinary {
     if (-not [string]::IsNullOrWhiteSpace($env:GODOT_BIN)) { $candidates += $env:GODOT_BIN }
     if (-not [string]::IsNullOrWhiteSpace($env:GODOT)) { $candidates += $env:GODOT }
 
+    # Linux is the primary environment. These are common install locations; the
+    # PATH lookup below covers distro packages and local builds.
+    $candidates += @(
+        "/usr/local/bin/godot",
+        "/usr/bin/godot",
+        "/opt/godot/godot",
+        (Join-Path $HOME ".local/bin/godot")
+    )
+
+    # Windows fallback.
     $candidates += @(
         "C:\Program Files (x86)\Steam\steamapps\common\Godot Engine\godot.windows.opt.tools.64.exe",
         "C:\Program Files\Steam\steamapps\common\Godot Engine\godot.windows.opt.tools.64.exe"
     )
 
     foreach ($candidate in $candidates) {
+        if ([string]::IsNullOrWhiteSpace($candidate)) { continue }
         if (Test-Path -LiteralPath $candidate -PathType Leaf) {
             return (Resolve-Path -LiteralPath $candidate).Path
         }
     }
 
-    $command = Get-Command godot -ErrorAction SilentlyContinue
-    if ($command -and $command.Source) {
-        return $command.Source
+    foreach ($name in @("godot", "godot4")) {
+        $command = Get-Command $name -ErrorAction SilentlyContinue
+        if ($command -and $command.Source) {
+            return $command.Source
+        }
     }
 
-    throw "Godot executable not found. Set GODOT_BIN or pass -GodotBin. See docs/getting-started.md."
+    throw "Godot executable not found. Set GODOT_BIN, pass -GodotBin, or add godot to PATH. See docs/getting-started.md."
 }
 
 function Assert-GodotVersion {

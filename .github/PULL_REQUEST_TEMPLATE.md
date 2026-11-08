@@ -24,8 +24,8 @@ Observed: ...
 -->
 
 ## Verification
-- [ ] `.\scripts\verify.ps1` passes locally
-- [ ] CI is green (required `CI` check)
+- [ ] `pwsh ./scripts/verify.ps1` passes locally (Windows PowerShell: `.\scripts\verify.ps1`)
+- [ ] CI is green (aggregate `CI` check)
 - [ ] Tested in Godot editor (if visual/gameplay changes)
 
 ## Screenshots/Videos

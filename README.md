@@ -11,11 +11,26 @@
 
 ## Getting Started
 
+Linux is the primary development environment; CI runs on `ubuntu-latest`. Windows
+works as a fallback.
+
 1. Install [Godot 4.7.2](https://godotengine.org/download) (pinned in `.godot-version`)
-2. Clone this repository
-3. Open the project by opening `project.godot` in the Godot editor
-4. Main scene is `res://game/main.tscn`
-5. <!-- Run instructions to be added -->
+2. Install PowerShell 7+ (`pwsh`)
+3. Clone this repository
+4. Open the project by opening `project.godot` in the Godot editor
+5. Main scene is `res://game/main.tscn`
+
+```bash
+# Static check: imports the project and boots the main scene
+pwsh ./scripts/check.ps1
+
+# Run the project / open the editor
+pwsh ./scripts/run-godot.ps1
+pwsh ./scripts/run-godot.ps1 -Editor
+```
+
+On Windows PowerShell, substitute `.\scripts\...`. Full setup details:
+[docs/getting-started.md](docs/getting-started.md).
 
 ## Project Structure
 
@@ -33,15 +48,16 @@ See [docs/architecture.md](docs/architecture.md) for more details.
 
 ## Testing
 
-```powershell
+```bash
 # Pre-PR gate: static checks + all tests
-.\scripts\verify.ps1
+pwsh ./scripts/verify.ps1
 
 # While iterating
-.\scripts\test.ps1 -Tier unit
+pwsh ./scripts/test.ps1 -Tier unit
 ```
 
-See [docs/testing.md](docs/testing.md) for tiers, policy, and determinism rules.
+On Windows PowerShell, substitute `.\scripts\...`. See
+[docs/testing.md](docs/testing.md) for tiers, policy, and determinism rules.
 
 ## Development Workflow
 
@@ -49,6 +65,8 @@ This project uses an issue-driven workflow with feature branches and pull reques
 
 - [AGENTS.md](AGENTS.md) - Agent workflow rules and conventions
 - [CONTRIBUTING.md](CONTRIBUTING.md) - Contribution guidelines
+- [docs/agents/README.md](docs/agents/README.md) - Runbooks for less-capable agents
+- [docs/agents/human-guide.md](docs/agents/human-guide.md) - How to direct and review agents
 - Issues are tracked on GitHub
 
 ## Notes

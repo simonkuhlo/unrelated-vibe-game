@@ -14,17 +14,19 @@ tests/
 
 Run everything with:
 
-```powershell
-.\scripts\verify.ps1
+```bash
+pwsh ./scripts/verify.ps1
 ```
 
 Run a tier while iterating:
 
-```powershell
-.\scripts\test.ps1 -Tier unit
-.\scripts\test.ps1 -Tier integration
-.\scripts\test.ps1 -Path tests/unit/smoke/test_framework_smoke.gd
+```bash
+pwsh ./scripts/test.ps1 -Tier unit
+pwsh ./scripts/test.ps1 -Tier integration
+pwsh ./scripts/test.ps1 -Path tests/unit/smoke/test_framework_smoke.gd
 ```
+
+On Windows PowerShell, substitute `.\scripts\...`.
 
 See [docs/testing.md](../docs/testing.md) for the policy, determinism rules, and
 the manual-test escape hatch.

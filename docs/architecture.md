@@ -45,6 +45,28 @@ Holds everything UI related.
 
 More detailed UI patterns will be documented as they evolve.
 
+### `scripts/`
+Local entry points used by both developers and CI. Keep behavior identical to
+CI where possible.
+
+- `verify.ps1` - full pre-PR gate
+- `check.ps1` - import, parse, and boot checks
+- `test.ps1` - gdUnit4 suites
+- `_godot.ps1` - shared Godot binary and path resolution
+- `run-godot.ps1` / `run-multiplayer.ps1` - local run helpers
+
+### `.github/`
+CI workflows, issue forms, and the PR template. Changes here are repo-meta work;
+see [agents/repo-meta.md](agents/repo-meta.md).
+
+### `docs/`
+Project documentation and decision inputs. Add new docs to
+[docs/README.md](README.md). Use status headers for research and ideas.
+
+### `addons/`
+Vendored dependencies, currently gdUnit4. Do not edit vendored code; upgrade it
+through the procedure in [testing.md](testing.md#framework-upgrades).
+
 ## Design Goals
 
 - **Reusability**: Systems in `system/` should be portable

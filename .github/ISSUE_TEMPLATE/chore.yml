@@ -1,0 +1,90 @@
+name: Chore / repo-meta
+description: Maintenance work on CI, templates, labels, scripts, docs, or repository settings
+title: "chore: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Repo-meta work follows `docs/agents/repo-meta.md`. Changes to rulesets,
+        branch protection, required checks, CODEOWNERS, secrets, or Actions
+        permissions need explicit human approval before an agent applies them.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What needs to change, and why now?
+      placeholder: Describe the maintenance problem and the intended fix.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which part of the repository does this touch?
+      options:
+        - CI workflows
+        - Issue or PR templates
+        - Labels or milestones
+        - Rulesets, branch protection, or required checks
+        - CODEOWNERS, secrets, or Actions permissions
+        - Scripts
+        - Docs or docs index
+        - Dependencies or tooling
+        - Repository settings
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: Concrete list of what is in scope.
+      placeholder: |
+        - Update ...
+        - Add ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Observable, testable conditions that define "done".
+      placeholder: |
+        - [ ] ...
+        - [ ] ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: verification
+    attributes:
+      label: Verification
+      description: How will the change be proven? Name commands or checks.
+      placeholder: |
+        - `pwsh ./scripts/verify.ps1`
+        - `gh api repos/{owner}/{repo}/rulesets`
+        - Manual: exact steps, expected, observed
+    validations:
+      required: true
+
+  - type: dropdown
+    id: risk
+    attributes:
+      label: Risk
+      description: Does this change affect repository settings outside git?
+      options:
+        - Safe on a branch (docs, tests, scripts, templates)
+        - Needs human approval (rulesets, protection, secrets, permissions, CODEOWNERS)
+    validations:
+      required: true
+
+  - type: textarea
+    id: out-of-scope
+    attributes:
+      label: Out of scope
+      description: Things this issue explicitly does not cover.
+    validations:
+      required: false

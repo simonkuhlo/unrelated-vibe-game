@@ -1,4 +1,8 @@
-# Multiplayer session system   
+# Multiplayer session system
+
+**Status:** Idea. Not an accepted specification or implementation plan.
+**Scope:** Early notes for a future multiplayer session system.
+
 ## Summary   
 A "multiplayer session" (session) acts as the core of a multiplayer session. It can control / dictate / sync the state of certain other systems, like the map loader or the gamemode loader. A session can have the following states:   
 ## Session states   
