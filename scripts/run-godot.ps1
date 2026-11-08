@@ -1,37 +1,28 @@
-# Run Godot project using Steam Godot if available
+# Run the Godot project or editor using the shared binary resolution.
+# Linux: uses GODOT_BIN, common install locations, then godot on PATH.
+# Windows: also checks the Steam install as a fallback.
 param(
     [string]$Project = ".",
     [string]$Scene = "",
-    [switch]$Editor
+    [switch]$Editor,
+    [string]$GodotBin = ""
 )
 
-$GodotPaths = @(
-    "C:\Program Files (x86)\Steam\steamapps\common\Godot Engine\godot.windows.opt.tools.64.exe",
-    "C:\Program Files\Steam\steamapps\common\Godot Engine\godot.windows.opt.tools.64.exe"
-)
+$ErrorActionPreference = "Stop"
+. (Join-Path $PSScriptRoot "_godot.ps1")
 
-$Godot = $null
-foreach ($p in $GodotPaths) {
-    if (Test-Path $p) { $Godot = $p; break }
-}
+$root = Resolve-GodotProjectRoot -Project $Project
+$godot = Resolve-GodotBinary -GodotBin $GodotBin -ProjectRoot $root
+Assert-GodotVersion -Godot $godot -ProjectRoot $root
 
-if (-not $Godot) {
-    # Try to find any godot exe
-    $found = Get-ChildItem "C:\Program Files (x86)\Steam\steamapps\common" -Filter "godot*.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
-    if ($found) { $Godot = $found.FullName }
-}
+Write-Host "Using: $godot" -ForegroundColor Cyan
 
-if (-not $Godot) {
-    Write-Host "Godot executable not found. Install Godot via Steam or update scripts/run-godot.ps1" -ForegroundColor Red
-    exit 1
-}
-
-Write-Host "Using: $Godot" -ForegroundColor Cyan
-
+$godotArgs = @("--path", $root)
 if ($Editor) {
-    & $Godot --path $Project
-} elseif ($Scene) {
-    & $Godot --path $Project $Scene
-} else {
-    & $Godot --path $Project
+    $godotArgs += "-e"
+} elseif (-not [string]::IsNullOrWhiteSpace($Scene)) {
+    $godotArgs += $Scene
 }
+
+& $godot @godotArgs
+exit $LASTEXITCODE
