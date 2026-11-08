@@ -1,5 +1,7 @@
 # Agent Runbooks
 
+**Status:** Active. Entry point for the agent runbooks.
+
 These files are for agents that need exact instructions, and for humans who are
 directing them. They are intentionally separate from `AGENTS.md` so capable
 agents do not have to read them.

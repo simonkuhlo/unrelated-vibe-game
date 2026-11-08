@@ -1,5 +1,7 @@
 # Godot File Hygiene
 
+**Status:** Active. Checklist for scene, resource, asset, and project-setting changes.
+
 Use this checklist when changing scenes, resources, assets, project settings, or
 tests that depend on the Godot import cache.
 

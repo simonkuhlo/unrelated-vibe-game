@@ -95,27 +95,11 @@ Keep descriptions short, lowercase, kebab-case.
    git push -u origin <branch-name>
    ```
 
-2. **Open a Pull Request automatically**: Write the body to a file, then create a draft PR.
+2. **Open a Pull Request automatically**: Use `.github/PULL_REQUEST_TEMPLATE.md` as the body, then create a draft PR.
    ```powershell
-   $body = @'
-   ## Summary
-   <brief description of changes>
-
-   ## Related Issue
-   Closes #<issue-number>
-
-   ## Changes
-   - <list key changes>
-
-   ## Testing
-   - [ ] `pwsh ./scripts/verify.ps1` passes
-   - [ ] Automated tests added/updated for behavior changes
-   - [ ] Manual test recorded below (only if automation is impractical)
-
-   <how to test>
-   '@
-   $bodyFile = Join-Path $env:TEMP "pr-body.md"
-   Set-Content -LiteralPath $bodyFile -Value $body -Encoding utf8
+   $bodyFile = Join-Path ([System.IO.Path]::GetTempPath()) "pr-body.md"
+   Copy-Item ".github/PULL_REQUEST_TEMPLATE.md" $bodyFile
+   # Fill in the summary, changes, tests, and verification in $bodyFile.
    gh pr create --draft --title "<descriptive title>" --body-file $bodyFile
    ```
    - Default to **draft PRs** unless explicitly told otherwise

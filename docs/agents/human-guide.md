@@ -1,5 +1,7 @@
 # Human Guide: Directing Agents
 
+**Status:** Active. Guide for humans choosing agent context and reviewing agent PRs.
+
 This guide is for humans choosing an agent's context and reviewing its work. It
 is not required reading for capable agents.
 

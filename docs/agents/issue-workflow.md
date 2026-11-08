@@ -1,5 +1,7 @@
 # Issue Workflow
 
+**Status:** Active. Full execution runbook for implementing or fixing an issue.
+
 Use this runbook when you are implementing or fixing a GitHub issue. It assumes
 you can run `git`, `gh`, and the project scripts.
 
@@ -51,8 +53,8 @@ $plan = @'
 - Verify: `pwsh ./scripts/verify.ps1`
 - Risks/unknowns: <none or list>
 '@
-$planFile = Join-Path $env:TEMP "issue-123-plan.md"
-Set-Content -LiteralPath $planFile -Value $plan -Encoding utf8
+$planFile = Join-Path ([System.IO.Path]::GetTempPath()) "issue-123-plan.md"
+[System.IO.File]::WriteAllText($planFile, $plan, [System.Text.UTF8Encoding]::new($false))
 gh issue comment 123 --body-file $planFile
 ```
 
@@ -137,38 +139,12 @@ If you cannot run Godot, say so in the PR instead of claiming tests passed.
 git push -u origin <branch-name>
 ```
 
-Write the body to a file, then create the PR:
+Write the body to a file using the PR template, then create the PR:
 
 ```powershell
-$body = @'
-## Summary
-
-<what changed>
-
-## Related Issue
-
-Closes #123
-
-## Changes
-
-- <key changes>
-
-## Automated Tests
-
-- <suites added or updated>
-- <why no test changes are needed, if applicable>
-
-## Manual Test
-
-<only if automation is impractical: steps, expected, observed>
-
-## Verification
-
-- [ ] `pwsh ./scripts/verify.ps1` passes locally
-- [ ] CI is green
-'@
-$bodyFile = Join-Path $env:TEMP "pr-body.md"
-Set-Content -LiteralPath $bodyFile -Value $body -Encoding utf8
+$bodyFile = Join-Path ([System.IO.Path]::GetTempPath()) "pr-body.md"
+Copy-Item ".github/PULL_REQUEST_TEMPLATE.md" $bodyFile
+# Fill in the template, then create the PR.
 gh pr create --draft --title "feat: ... (#123)" --body-file $bodyFile
 ```
 

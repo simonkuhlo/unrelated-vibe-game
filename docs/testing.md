@@ -158,7 +158,8 @@ Every pull request runs:
 - `static`: import, parse every first-party `.gd`, boot the main scene.
 - `test`: gdUnit4 unit + integration + content, JUnit/HTML report artifacts,
   zero-test guard, fail on exit `100`/`101`.
-- `CI`: an aggregate job that is the only required branch-protection check.
+- `CI`: an aggregate job intended to become the only required branch-protection
+  check; it is not enforced by branch protection yet.
 
 The gate targets five minutes. Slow or environment-heavy checks (export, boot
 smoke) run nightly, not on PRs. See [ci.md](ci.md) for workflow details,

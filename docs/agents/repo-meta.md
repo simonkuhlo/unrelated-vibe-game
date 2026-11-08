@@ -1,5 +1,7 @@
 # Repo-Meta Work
 
+**Status:** Active. Runbook for CI, template, label, script, and repository-setting changes.
+
 Use this runbook for changes to the repository itself: CI, issue and PR
 templates, labels, rulesets, scripts, docs indexes, Dependabot, and repository
 settings.
@@ -13,7 +15,7 @@ need explicit human approval.
 | Change | Rule |
 |---|---|
 | Docs, tests, scripts | Safe on a branch with `pwsh ./scripts/verify.ps1`. |
-| Issue and PR templates | Safe on a branch, but validate the YAML and show the rendered result. |
+| Issue and PR templates | Safe on a branch, but validate the YAML; issue forms only render from the default branch. |
 | Workflow YAML | Safe on a branch. Keep `permissions: contents: read`, pin actions, and inspect the PR run. |
 | Labels | Safe to create or edit, but do not delete default labels or labels in active use. |
 | Dependabot config | Safe on a branch; do not auto-merge major updates. |
@@ -44,18 +46,13 @@ gh api repos/{owner}/{repo}/branches/main/protection
 
 That is expected here. Use the rulesets endpoint instead.
 
-## Current state (verified 2026-11-08)
+## Current state
 
-- `main-1`: blocks deletion and non-fast-forward pushes.
-- `main-2`: requires a pull request and `require_code_owner_review: true`.
-- `main-2` has no required status checks and allows `merge`, `squash`, and
-  `rebase`.
-- There is no `.github/CODEOWNERS` file, so the code-owner requirement currently
-  has no code owner to require.
-- `docs/ci.md` describes the target setup (required `CI` check, squash-only,
-  up-to-date branches). It is not fully applied yet.
+`docs/ci.md` is the source of truth for the live setup:
+[Current state vs target state](../ci.md#current-state-vs-target-state).
 
-These facts change. Re-run the audit commands before acting.
+In short: the `CI` check is not required yet, and there is no `.github/CODEOWNERS`
+file. These facts change, so re-run the audit commands before acting.
 
 ## Docs changes
 

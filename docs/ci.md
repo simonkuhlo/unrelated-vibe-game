@@ -21,7 +21,8 @@ below.
 - There is no `.github/CODEOWNERS` file, so the code-owner requirement currently
   has no code owner to require.
 - The required `CI` check and squash-only policy described under
-  [Branch protection](#branch-protection) are target state, not current state.
+  [Target branch protection](#target-branch-protection) are target state, not
+  current state.
 
 Verify before acting:
 
@@ -58,7 +59,7 @@ Jobs:
 |---|---|---|
 | `static` | `pwsh ./scripts/check.ps1` | Import, parse every first-party `.gd`, boot the main scene |
 | `test` | `pwsh ./scripts/test.ps1` | gdUnit4 unit + integration + content, zero-test guard |
-| `CI` | Result gate | Only required branch-protection check |
+| `CI` | Result gate | Aggregate check; intended required branch-protection check (not yet enforced) |
 
 `test` uploads `reports/` as the `gdunit4-reports` artifact on every run,
 including failures. The `CI` gate uses `if: always()` and explicitly fails

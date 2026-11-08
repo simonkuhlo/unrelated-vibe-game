@@ -1,8 +1,8 @@
 # Map Loader
 
-**Status:** Partially implemented. Map data, the built-in repository (#12), and
-the map scene API (#14) are implemented; the loader, map content, and UI are
-pending.
+**Status:** Active. Partially implemented: map data, the built-in repository
+(#12), and the map scene API (#14) are implemented; the loader, map content, and
+UI are pending.
 
 ## Implementation status
 

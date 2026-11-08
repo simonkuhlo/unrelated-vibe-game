@@ -1,7 +1,6 @@
 name: Chore / repo-meta
 description: Maintenance work on CI, templates, labels, scripts, docs, or repository settings
 title: "chore: "
-labels: ["documentation"]
 body:
   - type: markdown
     attributes:

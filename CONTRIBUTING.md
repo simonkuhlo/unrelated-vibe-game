@@ -41,7 +41,7 @@ Policy:
 - If automation is impractical, explain why in the PR and record exact manual
   steps and expected results.
 - Never weaken tests or CI to get a green build.
-- CI runs the same scripts on Linux; the required `CI` check must be green
+- CI runs the same scripts on Linux; wait for the aggregate `CI` check to pass
   before merging (see [docs/ci.md](docs/ci.md)).
 
 See [docs/testing.md](docs/testing.md) for tiers, determinism rules, and the

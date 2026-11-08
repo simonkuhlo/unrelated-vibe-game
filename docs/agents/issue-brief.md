@@ -1,5 +1,7 @@
 # Issue Brief Template
 
+**Status:** Active. Template for handing work to a less-capable agent.
+
 Use this as an issue comment when handing work to a less-capable agent, or as a
 handoff comment when an agent stops. It gives the agent the context it cannot
 discover reliably on its own.
