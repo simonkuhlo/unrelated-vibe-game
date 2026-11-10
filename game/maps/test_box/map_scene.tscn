@@ -1,0 +1,18 @@
+[gd_scene format=3 uid="uid://cpk3iclq3tb33"]
+
+[ext_resource type="Script" uid="uid://3efpopoh6fbf" path="res://system/maploader_new/map_scene_new.gd" id="1_vp0su"]
+[ext_resource type="Script" uid="uid://c0kh2n1bbfbfs" path="res://system/maploader_new/spawn_point_collection_new.gd" id="2_q12n3"]
+[ext_resource type="Script" uid="uid://i7o3xfgy2vot" path="res://system/maploader_new/player_spawn_point_new.gd" id="3_ayohf"]
+
+[node name="MapScene" type="Node3D" unique_id=1431911506 node_paths=PackedStringArray("spawn_point_root")]
+script = ExtResource("1_vp0su")
+spawn_point_root = NodePath("SpawnPointCollectionNew")
+metadata/_custom_type_script = "uid://3efpopoh6fbf"
+
+[node name="SpawnPointCollectionNew" type="Node3D" parent="." unique_id=2098790346]
+script = ExtResource("2_q12n3")
+metadata/_custom_type_script = "uid://c0kh2n1bbfbfs"
+
+[node name="PlayerSpawnpointNew" type="Marker3D" parent="SpawnPointCollectionNew" unique_id=888397531]
+script = ExtResource("3_ayohf")
+metadata/_custom_type_script = "uid://i7o3xfgy2vot"

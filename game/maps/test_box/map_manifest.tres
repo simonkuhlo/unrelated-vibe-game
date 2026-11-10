@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="MapManifestNew" format=3 uid="uid://ece5ts58yxd2"]
+
+[ext_resource type="Script" uid="uid://bcc7l6vbx22g0" path="res://system/maploader_new/map_manifest_new.gd" id="1_lwfwt"]
+[ext_resource type="PackedScene" uid="uid://cpk3iclq3tb33" path="res://game/maps/test_box/map_scene.tscn" id="1_rs2rd"]
+[ext_resource type="Texture2D" uid="uid://c5evllurw2edu" path="res://assets/icon.svg" id="3_wqqtl"]
+
+[resource]
+script = ExtResource("1_lwfwt")
+id = &"TEST_BOX"
+version = "1"
+scene = ExtResource("1_rs2rd")
+display_name = "Test box"
+thumbnail = ExtResource("3_wqqtl")
+metadata/_custom_type_script = "uid://bcc7l6vbx22g0"
