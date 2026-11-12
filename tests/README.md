@@ -7,7 +7,7 @@ Suite files are named `test_*.gd` and extend `GdUnitTestSuite`.
 tests/
   unit/         # Pure logic and contracts; no scene tree, no I/O
   integration/  # Scenes, signals, lifecycle, UI wiring
-  content/      # Map manifests, catalogs, export filters
+  content/      # Map database entries, manifests, export filters
   fixtures/     # Shared scenes, resources, and small data fixtures
   tools/        # Test tooling invoked by scripts/ (excluded from exports)
 ```

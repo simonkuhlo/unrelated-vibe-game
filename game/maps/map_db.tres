@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="MapDBNew" format=3 uid="uid://btrfv3nfr8sj2"]
+
+[ext_resource type="Script" uid="uid://bcc7l6vbx22g0" path="res://system/maploader_new/map_manifest_new.gd" id="1_i8pya"]
+[ext_resource type="Script" uid="uid://dn2lt5n7732bh" path="res://system/maploader_new/map_db_new.gd" id="2_i8pya"]
+[ext_resource type="Resource" uid="uid://ece5ts58yxd2" path="res://game/maps/test_box/map_manifest.tres" id="2_ycn4g"]
+
+[resource]
+script = ExtResource("2_i8pya")
+_maps = Dictionary[StringName, ExtResource("1_i8pya")]({
+&"TEST_BOX": ExtResource("2_ycn4g")
+})
+metadata/_custom_type_script = "uid://dn2lt5n7732bh"

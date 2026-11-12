@@ -3,7 +3,11 @@
 **Date:** 2026-11-03
 **Status:** Accepted. gdUnit4 6.2.3 was adopted in #21 after a compatibility spike on Godot 4.7.2 (Windows). Linux is verified by CI.
 **Scope:** Choosing a base for the project's automated test system
-**Related:** [Issue #11](https://github.com/simonkuhlo/unrelated-vibe-game/issues/11), [Issue #21](https://github.com/simonkuhlo/unrelated-vibe-game/issues/21), [Map Loader test plan](../maploader.md#test-plan)
+**Related:** [Issue #11](https://github.com/simonkuhlo/unrelated-vibe-game/issues/11), [Issue #21](https://github.com/simonkuhlo/unrelated-vibe-game/issues/21), [Map Loader rework (#35)](https://github.com/simonkuhlo/unrelated-vibe-game/issues/35)
+
+> The maploader design and test plan referenced in this dated evaluation were
+> superseded by the editor-first rework in #35. Treat those references as
+> historical context, not current specifications.
 **Recommendation:** gdUnit4 6.2.3, with GUT 9.7.1 as the fallback if truly headless scene/input testing is required today
 
 ---

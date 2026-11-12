@@ -28,7 +28,7 @@ need exact commands, are doing repo-meta work, or are editing Godot files.
 | `docs/testing.md` | Test tiers, policy, determinism, commands, troubleshooting. |
 | `docs/ci.md` | CI jobs, artifacts, target branch protection, local parity. |
 | `docs/architecture.md` | `system/`, `game/`, `ui/`, `tests/`, and design boundaries. |
-| `docs/maploader.md` | Map loader design, implemented status, contracts, and test plan. |
+| `docs/maploader.md` | Editor-first maploader rework status and current state. |
 | `scripts/verify.ps1` | Pre-PR gate: static checks plus all test tiers. |
 | `scripts/check.ps1` | Import, parse every first-party `.gd`, boot the main scene. |
 | `scripts/test.ps1` | gdUnit4 suites; supports `-Tier` and `-Path`. |
@@ -37,7 +37,8 @@ need exact commands, are doing repo-meta work, or are editing Godot files.
 | `.github/workflows/nightly.yml` | Export, boot, and PCK-content smoke test. |
 | `.github/ISSUE_TEMPLATE/` | Bug, feature, and chore issue forms. |
 | `.github/PULL_REQUEST_TEMPLATE.md` | PR body checklist. |
-| `system/maploader/` | Implemented map data, repository, scene API, and loaded-map handle. |
+| `system/maploader_new/` | Draft editor-first map data model (rework in progress, #35). |
+| `game/maps/` | Built-in map DB resource and map content. |
 | `game/main.tscn` | Current main scene. |
 
 ## Read only what you need

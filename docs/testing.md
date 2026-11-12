@@ -26,7 +26,7 @@ are human checks recorded in the PR.
 | Parse/import/boot | repo | Every PR | Broken scripts, resources, scenes |
 | Unit | `tests/unit/` | Every PR | Pure logic, APIs, invariants, no scene tree |
 | Integration | `tests/integration/` | Every PR | Scenes, signals, lifecycle, UI wiring |
-| Content | `tests/content/` | Every PR + nightly | Manifests, catalogs, export filters |
+| Content | `tests/content/` | Every PR + nightly | Map database entries, manifests, export filters |
 | Export/boot smoke | CI nightly | Nightly | Packaging and startup |
 | Multiplayer loopback | `tests/network/` (future) | Deferred | Protocol and state-machine regressions |
 
@@ -39,15 +39,15 @@ or engine state, it belongs in `integration/`.
 tests/
   unit/
     smoke/
-    maploader/        # mirrors system/maploader
   integration/
     smoke/
-    maploader/
   content/
   fixtures/
-    maps/
   tools/              # tooling invoked by scripts/ (excluded from exports)
 ```
+
+Map loader suites return with the editor-first rework (#35); replacement
+coverage is tracked in #18. Keep unit tests free of scene dependencies.
 
 Suite files are named `test_*.gd` and extend `GdUnitTestSuite`. Test methods
 start with `test_`. Discovery is by directory and base class; there is no
@@ -76,26 +76,32 @@ Fixtures are shared scenes, resources, and small data files under
 extends GdUnitTestSuite
 
 
-func test_manifest_defaults() -> void:
-	var manifest := MapManifest.new()
+class FakeStat:
+	extends Resource
 
-	assert_that(String(manifest.map_id)).is_empty()
-	assert_int(manifest.player_min).is_equal(1)
-	assert_int(manifest.player_max).is_equal(32)
+	@export var value: int = 10
+	@export var maximum: int = 100
+
+
+func test_stat_defaults() -> void:
+	var stat := FakeStat.new()
+
+	assert_int(stat.value).is_equal(10)
+	assert_int(stat.maximum).is_equal(100)
 ```
 
 Parameterized tests put the cases in a default `_test_parameters` argument:
 
 ```gdscript
-func test_player_range(player_min: int, player_max: int, _test_parameters := [
+func test_value_stays_within_maximum(value: int, maximum: int, _test_parameters := [
 	[1, 32],
 	[2, 4],
 ]) -> void:
-	var manifest := MapManifest.new()
-	manifest.player_min = player_min
-	manifest.player_max = player_max
+	var stat := FakeStat.new()
+	stat.value = value
+	stat.maximum = maximum
 
-	assert_bool(manifest.player_min <= manifest.player_max).is_true()
+	assert_bool(stat.value <= stat.maximum).is_true()
 ```
 
 Useful rules:
@@ -218,7 +224,7 @@ Example:
 Manual test: map browser list
 1. Open the project in Godot 4.7.2 and run Main.
 2. Open the map browser.
-Expected: the built-in catalog lists every map with a thumbnail.
+Expected: the built-in map DB lists every map with a thumbnail.
 Observed: two maps listed, thumbnails loaded, scrolling stayed smooth.
 ```
 

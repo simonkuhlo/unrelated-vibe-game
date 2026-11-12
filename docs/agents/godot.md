@@ -51,7 +51,7 @@ If you must hand-edit a `.tscn` or `.tres`:
 - Test tiers and policy: `docs/testing.md`.
 - Unit tests must not depend on the scene tree.
 - Integration tests own scenes, signals, and lifecycle.
-- Content tests own manifests, catalogs, and export filters.
+- Content tests own map database entries, manifests, and export filters.
 - Free every node you create. gdUnit4 reports orphans as exit `101`.
 - Bound every wait with a timeout.
 - Do not write to `res://`; use `user://` and clean up.
