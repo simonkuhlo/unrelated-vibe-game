@@ -120,7 +120,7 @@ pwsh ./scripts/verify.ps1
 One suite:
 
 ```bash
-pwsh ./scripts/test.ps1 -Path tests/unit/maploader/test_map_repository_queries.gd
+pwsh ./scripts/test.ps1 -Path tests/unit/smoke/test_framework_smoke.gd
 ```
 
 If Godot is not found:

@@ -5,7 +5,7 @@
 - [Architecture](architecture.md) - Project structure and design principles
 - [Testing](testing.md) - Test strategy, tiers, CI gates, and local commands
 - [Continuous Integration](ci.md) - CI workflows, artifacts, and branch protection
-- [Map Loader](maploader.md) - Map database, loading lifecycle, and integration contracts
+- [Map Loader](maploader.md) - Editor-first maploader rework status and current state
 - [Getting Started](getting-started.md) - Setup instructions
 - [Multiplayer](multiplayer.md) - Multiplayer architecture notes (placeholder)
 - [Agent Runbooks](agents/README.md) - Execution guides for agents and the humans directing them

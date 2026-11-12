@@ -26,15 +26,14 @@ Keep it short. If a field does not apply, write `none`.
 ```markdown
 ## Agent brief
 
-- **Goal:** Add a regression test for duplicate map versions with different hashes.
-- **Non-goals:** Do not change repository validation or ordering.
-- **Files/areas:** `tests/unit/maploader/test_map_repository_queries.gd`,
-  `tests/fixtures/maps/repository/catalog_duplicates.tres`
-- **Contracts/invariants:** `find_exact()` is hash-authoritative; both entries
-  remain in `list()`.
-- **Test plan:** Unit test in `tests/unit/maploader/`.
+- **Goal:** Add a regression test for a required export exclusion.
+- **Non-goals:** Do not change the export preset or CI configuration.
+- **Files/areas:** `tests/content/test_export_presets.gd`, `export_presets.cfg`
+- **Contracts/invariants:** The Linux preset exports all runtime resources and
+  excludes `tests/*`, `reports/*`, and `addons/gdUnit4/*`.
+- **Test plan:** Content test in `tests/content/`.
 - **Verification:** `pwsh ./scripts/test.ps1 -Path
-  tests/unit/maploader/test_map_repository_queries.gd`, then
+  tests/content/test_export_presets.gd`, then
   `pwsh ./scripts/verify.ps1`.
 - **Risks/unknowns:** none.
 - **Human decisions needed:** none.

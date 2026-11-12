@@ -20,14 +20,14 @@ These should be designed to be decoupled from game-specific rules where possible
 ### `game/`
 Holds game logic. Most of it will build on top of the systems created in `system/`. This is where game-specific rules, content integration, and gameplay flow live.
 
-Built-in map content lives in `game/maps/<map_id>/` (scene, manifest, thumbnail, and map-owned assets) so that map packs can be self-contained later. This is the exception to the `assets/` rule: assets used only by one map stay with that map.
+Built-in map content lives in `game/maps/<map_id>/` (scene, manifest, thumbnail, and map-owned assets). The built-in map database is `game/maps/map_db.tres`; see [maploader.md](maploader.md). Map-owned assets stay with their map as an exception to the `assets/` rule.
 
 ### `tests/`
 Holds all automated tests and fixtures, organized by tier:
 
 - `unit/` - pure logic and contracts, no scene tree
 - `integration/` - scenes, signals, lifecycle, and UI wiring
-- `content/` - map manifests, catalogs, and export rules
+- `content/` - map database entries, manifests, and export rules
 - `fixtures/` - shared test scenes, resources, and test maps
 
 Tests use gdUnit4 and run headless. See [testing.md](testing.md). The whole
