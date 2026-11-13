@@ -29,7 +29,10 @@ establish the v1 contracts.
 
 Phase 1 closeout follow-ups landed in #44: strict snake_case ids, `MapScene.markers`
 and the `Markers` node name aligned with decision A8, validation feedback from tool
-buttons, and validation-state/tests/docs cleanup.
+buttons, and validation-state/tests/docs cleanup. Phase 1 review follow-ups landed
+in #46: stronger content-test scene checks, marker-root validation, stricter ID
+handling, and documentation of the id/validation conventions. Design-level
+leftovers are tracked in #47.
 
 ### Phase 2 — Synchronous Loader (#13) — **GATED ON #40**
 - Implement `MapLoader` and `LoadedMap` per #40.

@@ -8,6 +8,10 @@ extends Resource
 ## Validation state is advisory: `is_validated` only records that `validate()`
 ## ran after the last mutation of this DB. It does not observe manifest field
 ## edits, so a loader must call `validate()` before using the DB (see #40).
+##
+## `validate()` checks manifest fields, ID format, and uniqueness. It does not
+## instantiate or validate map scenes; scene structure is checked by
+## `MapScene.validate()` and the CI content test.
 
 @export var maps: Array[MapManifest] = []:
 	set(value):
@@ -46,6 +50,8 @@ func is_valid() -> bool:
 
 
 func get_map(id: StringName) -> MapManifest:
+	if id.is_empty():
+		return null
 	for manifest in maps:
 		if manifest and manifest.id == id:
 			return manifest

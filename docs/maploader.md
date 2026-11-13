@@ -31,7 +31,9 @@ editor's resource graph as the authority:
   `snake_case`, single underscores, starting with a letter.
 - **`MapScene`** (`Node3D`, `@tool`): map root with `markers: MapMarkerCollection`,
   assigned to a `Markers` child via a typed node export. No other marker API is
-  exposed. Game-specific markers live in `game/` on a game-level subclass.
+  exposed. Validation requires the collection to be a direct child and warns
+  when the node is not named `Markers`. Game-specific markers live in `game/` on
+  a game-level subclass.
 - **`MapMarker`** (`Marker3D`, `@tool`): base marker class. Only this ships in v1;
   typed markers are built on demand in `game/`.
 - **`MapMarkerCollection`** (`Node3D`, `@tool`): script on the `Markers` root with
@@ -47,8 +49,10 @@ editor's resource graph as the authority:
 
 ## Identity and validation
 
-- `manifest.id` is the sole identity. Ids are read-only at runtime. Editing an id
-  at editor time does not require re-adding the map.
+- `manifest.id` is the sole identity. Runtime code treats ids as read-only by
+  convention, like the array copies returned by `get_maps()`; the export is not
+  enforced as immutable. Editing an id at editor time does not require re-adding
+  the map.
 - `MapDB.is_validated` is **advisory state**: it records that `validate()` ran
   after the last mutation of the DB (`add_map`, `remove_map`, `clear_db`, or a
   `maps` property assignment). It does not observe manifest field edits, and
@@ -60,6 +64,10 @@ editor's resource graph as the authority:
 - Components return `Array[MapValidationIssue]` from `validate()`. IDs are unique
   per DB and duplicate detection is part of validation, not a separate editor
   mechanism.
+- `MapDB.validate()` checks manifest fields, ID format, and uniqueness. It does
+  **not** instantiate or validate map scenes; scene structure is checked by
+  `MapScene.validate()` and the CI content test. Where loader-side scene
+  validation lives is a Phase 2 decision ([#40](https://github.com/simonkuhlo/unrelated-vibe-game/issues/40)).
 - Validation triggers: `@export_tool_button("Validate")` on `MapDB`,
   `MapManifest`, `MapScene`, and `MapMarkerCollection`;
   `MapScene._get_configuration_warnings()`; the CI content test. No custom
@@ -118,6 +126,7 @@ system/maploader/
 ## Deferred items
 
 - Loader API, host contract, and unload semantics — [#40](https://github.com/simonkuhlo/unrelated-vibe-game/issues/40).
+- Phase 1 review leftovers (scene-validation ownership, validation-state API, game marker subclass) — [#47](https://github.com/simonkuhlo/unrelated-vibe-game/issues/47).
 - Async loader — [#36](https://github.com/simonkuhlo/unrelated-vibe-game/issues/36).
 - Downloadable packs — [#17](https://github.com/simonkuhlo/unrelated-vibe-game/issues/17).
 - Content hashing — [#16](https://github.com/simonkuhlo/unrelated-vibe-game/issues/16).
@@ -126,6 +135,8 @@ system/maploader/
 ## Related
 
 - [Maploader Roadmap](maploader-roadmap.md)
+- [Issue #46: Phase 1 review follow-ups](https://github.com/simonkuhlo/unrelated-vibe-game/issues/46)
+- [Issue #47: Phase 1 review design leftovers](https://github.com/simonkuhlo/unrelated-vibe-game/issues/47)
 - [Issue #40: loader API/host contract/unload semantics](https://github.com/simonkuhlo/unrelated-vibe-game/issues/40)
 - [Issue #13: synchronous v1 loader](https://github.com/simonkuhlo/unrelated-vibe-game/issues/13)
 - [Issue #15: Main bootstrap and map browser](https://github.com/simonkuhlo/unrelated-vibe-game/issues/15)

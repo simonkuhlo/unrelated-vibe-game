@@ -19,6 +19,7 @@ func test_manifest_validation_rules(
 		["_map", true, "Test Map", true, 1, 0],        # Invalid ID (leading underscore)
 		["map_", true, "Test Map", true, 1, 0],        # Invalid ID (trailing underscore)
 		["map__name", true, "Test Map", true, 1, 0],   # Invalid ID (double underscore)
+		["test_map\n", true, "Test Map", true, 1, 0],  # Invalid ID (trailing newline)
 		["test_map", false, "Test Map", true, 1, 0],   # Missing scene
 		["test_map", true, "", true, 1, 0],            # Missing display name
 		["test_map", true, "Test Map", false, 0, 1]    # Missing thumbnail (warning only)

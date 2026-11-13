@@ -28,8 +28,21 @@ func test_map_db_content_resolves() -> void:
 		assert_that(manifest.display_name).is_not_empty()
 		assert_that(manifest.scene).override_failure_message("Map scene for '%s' is null or missing" % id).is_not_null()
 
-		if manifest.scene != null:
-			var instance := auto_free(manifest.scene.instantiate()) as Node
-			assert_that(instance).override_failure_message("Failed to instantiate map scene for '%s'" % id).is_not_null()
-			if instance is MapScene:
-				assert_that((instance as MapScene).markers).override_failure_message("MapScene '%s' has no markers root assigned" % id).is_not_null()
+		if manifest.scene == null:
+			continue
+
+		var instance := auto_free(manifest.scene.instantiate()) as Node
+		assert_that(instance).override_failure_message("Failed to instantiate map scene for '%s'" % id).is_not_null()
+		if instance == null:
+			continue
+
+		assert_bool(instance is MapScene).override_failure_message("Map scene for '%s' must use MapScene as its root" % id).is_true()
+		if not instance is MapScene:
+			continue
+
+		var map_scene := instance as MapScene
+		assert_that(map_scene.markers).override_failure_message("MapScene '%s' has no markers root assigned" % id).is_not_null()
+
+		for issue in map_scene.validate():
+			if issue.severity == MapValidationIssue.Severity.ERROR:
+				fail("MapScene validation error for '%s': %s" % [id, issue.format_string()])

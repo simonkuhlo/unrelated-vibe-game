@@ -4,9 +4,12 @@ extends Resource
 
 ## Built-in map descriptor. `id` is the sole identity and must be lowercase
 ## `snake_case` (single underscores, starting with a letter). The folder under
-## `game/maps/` matches the id.
+## `game/maps/` matches the id. Runtime code treats `id` as read-only by
+## convention; the editor is the only supported place to change it.
 
 const ID_PATTERN := "^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$"
+
+static var _id_regex: RegEx
 
 @export var id: StringName
 @export var scene: PackedScene
@@ -21,10 +24,8 @@ func validate() -> Array[MapValidationIssue]:
 
 	if id.is_empty():
 		issues.append(MapValidationIssue.new(MapValidationIssue.Severity.ERROR, &"id_missing", "Map ID is missing.", self))
-	else:
-		var regex := RegEx.create_from_string(ID_PATTERN)
-		if regex == null or regex.search(str(id)) == null:
-			issues.append(MapValidationIssue.new(MapValidationIssue.Severity.ERROR, &"id_invalid", "Map ID must be lowercase snake_case (e.g. test_box).", self))
+	elif not _is_valid_id(id):
+		issues.append(MapValidationIssue.new(MapValidationIssue.Severity.ERROR, &"id_invalid", "Map ID must be lowercase snake_case (e.g. test_box).", self))
 
 	if scene == null:
 		issues.append(MapValidationIssue.new(MapValidationIssue.Severity.ERROR, &"scene_missing", "Map scene is missing.", self))
@@ -40,6 +41,19 @@ func validate() -> Array[MapValidationIssue]:
 
 func is_valid() -> bool:
 	return not MapValidationIssue.has_errors(validate())
+
+
+func _is_valid_id(value: StringName) -> bool:
+	if _id_regex == null:
+		_id_regex = RegEx.create_from_string(ID_PATTERN)
+	if _id_regex == null:
+		return false
+
+	# `$` in PCRE can match before a trailing newline; require the whole match
+	# to cover the input so ids with whitespace are rejected.
+	var text := str(value)
+	var found := _id_regex.search(text)
+	return found != null and found.get_string() == text
 
 
 func _validate_from_editor() -> void:
