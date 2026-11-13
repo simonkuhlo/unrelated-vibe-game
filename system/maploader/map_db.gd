@@ -13,7 +13,7 @@ func validate() -> Array[MapValidationIssue]:
 	var seen_ids := {}
 	
 	for i in range(maps.size()):
-		var manifest = maps[i]
+		var manifest: MapManifest = maps[i]
 		if manifest == null:
 			issues.append(MapValidationIssue.new(MapValidationIssue.Severity.ERROR, &"manifest_null", "Manifest at index %d is null." % i, self))
 			continue
