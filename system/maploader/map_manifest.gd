@@ -15,9 +15,8 @@ func validate() -> Array[MapValidationIssue]:
 	if id.is_empty():
 		issues.append(MapValidationIssue.new(MapValidationIssue.Severity.ERROR, &"id_missing", "Map ID is missing.", self))
 	else:
-		var regex = RegEx.new()
-		regex.create_from_string("^[a-z0-9_]+$")
-		if not regex.search(id):
+		var regex := RegEx.create_from_string("^[a-z0-9_]+$")
+		if regex == null or regex.search(str(id)) == null:
 			issues.append(MapValidationIssue.new(MapValidationIssue.Severity.ERROR, &"id_invalid", "Map ID must be lowercase snake_case.", self))
 			
 	if scene == null:
