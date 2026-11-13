@@ -1,6 +1,7 @@
 # Maploader Roadmap
 
-**Status:** Active — Phase 0 closed 2026-11-13.
+**Status:** Active — Phase 0 closed 2026-11-13; Phase 1 closed 2026-11-13. Phase 2 is
+gated on #40.
 
 ## Summary
 
@@ -18,15 +19,19 @@ establish the v1 contracts.
 - [x] Finalize loader API/unload semantics — **deferred to #40**.
 - [x] Create #40 for the deferred loader design discussion.
 
-### Phase 1 — Finalize Data Model (#18)
-- Rename `system/maploader_new/` to `system/maploader/` (drop `_new`).
-- Implement `MapDB`, `MapManifest`, `MapScene`, `MapMarker`, `MapMarkerCollection`, `MapMarkerFilter`, `MapFilter`, `MapValidator`, `MapValidationIssue`.
-- Add unit tests for DB, manifest, marker collection, validation.
-- Add content tests.
-- Update `game/maps/test_box` to the final marker model.
-- Update `docs/maploader.md`.
+### Phase 1 — Finalize Data Model (#18) — **CLOSED 2026-11-13**
+- [x] Rename `system/maploader_new/` to `system/maploader/` (drop `_new`).
+- [x] Implement `MapDB`, `MapManifest`, `MapScene`, `MapMarker`, `MapMarkerCollection`, `MapMarkerFilter`, `MapFilter`, `MapValidator`, `MapValidationIssue`.
+- [x] Add unit tests for DB, manifest, marker collection, validation.
+- [x] Add content tests.
+- [x] Update `game/maps/test_box` to the final marker model.
+- [x] Update `docs/maploader.md`.
 
-### Phase 2 — Synchronous Loader (#13)
+Phase 1 closeout follow-ups landed in #44: strict snake_case ids, `MapScene.markers`
+and the `Markers` node name aligned with decision A8, validation feedback from tool
+buttons, and validation-state/tests/docs cleanup.
+
+### Phase 2 — Synchronous Loader (#13) — **GATED ON #40**
 - Implement `MapLoader` and `LoadedMap` per #40.
 - Loader-owned map root, terminal signal-based completion.
 

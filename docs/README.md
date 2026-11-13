@@ -6,7 +6,7 @@
 - [Testing](testing.md) - Test strategy, tiers, CI gates, and local commands
 - [Continuous Integration](ci.md) - CI workflows, artifacts, and branch protection
 - [Map Loader](maploader.md) - Editor-first maploader rework status and current state
-- [Maploader Design Session Roadmap](maploader-design-session-roadmap.md) - Roadmap and decisions for the maploader v1 design session
+- [Maploader Roadmap](maploader-roadmap.md) - Roadmap and decisions for the maploader v1 design session
 - [Getting Started](getting-started.md) - Setup instructions
 - [Multiplayer](multiplayer.md) - Multiplayer architecture notes (placeholder)
 - [Agent Runbooks](agents/README.md) - Execution guides for agents and the humans directing them

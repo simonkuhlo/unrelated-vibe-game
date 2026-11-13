@@ -30,6 +30,20 @@ If you must hand-edit a `.tscn` or `.tres`:
 - do not reorder resources blindly
 - run the parser gate afterward
 
+## Tool scripts and validation
+
+- Editor-facing classes (anything used by `@export_tool_button`,
+  `_get_configuration_warnings()`, or the inspector) must be `@tool`. Headless CI
+  does not execute editor paths, so broken editor feedback passes tests.
+- `@export_tool_button` discards the callable's return value. A validation button
+  must report results itself (log or push warnings/errors) instead of returning an
+  issue array. Follow `MapValidationIssue.log_all()` in `system/maploader/`.
+- Surface warnings as well as errors from `_get_configuration_warnings()`;
+  otherwise warning-only checks are invisible during authoring.
+- Validation state kept on a resource is advisory. If it can go stale through
+  inspector edits or direct array mutation, document what it means and make
+  consumers re-validate instead of trusting the flag.
+
 ## Assets
 
 - Do not rewrite binary assets unless the issue asks for it.

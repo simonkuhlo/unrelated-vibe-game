@@ -22,7 +22,7 @@ Holds game logic. Most of it will build on top of the systems created in `system
 
 Built-in map content lives in `game/maps/<map_id>/` (scene, manifest, thumbnail, and map-owned assets). The built-in map database is `game/maps/map_db.tres`; see [maploader.md](maploader.md). Map-owned assets stay with their map as an exception to the `assets/` rule.
 
-Maploader classes live in `system/maploader/` (`MapDB`, `MapManifest`, `MapScene`, `MapMarker`, `MapMarkerCollection`, `MapMarkerFilter`, `MapFilter`, `MapValidator`, `MapValidationIssue`, `MapLoadError`, `MapLoadResult`, `LoadedMap`, `MapLoader`). Generic base classes and tooling live here; game-specific markers live in `game/`.
+Maploader classes live in `system/maploader/`. The v1 data model is `MapDB`, `MapManifest`, `MapScene`, `MapMarker`, `MapMarkerCollection`, `MapMarkerFilter`, `MapFilter`, `MapValidator`, and `MapValidationIssue`. The Phase 2 loader classes (`MapLoadError`, `MapLoadResult`, `LoadedMap`, `MapLoader`) are planned and gated on #40. Generic base classes and tooling live here; game-specific markers live in `game/`.
 
 ### `tests/`
 Holds all automated tests and fixtures, organized by tier:

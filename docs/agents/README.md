@@ -37,7 +37,7 @@ need exact commands, are doing repo-meta work, or are editing Godot files.
 | `.github/workflows/nightly.yml` | Export, boot, and PCK-content smoke test. |
 | `.github/ISSUE_TEMPLATE/` | Bug, feature, and chore issue forms. |
 | `.github/PULL_REQUEST_TEMPLATE.md` | PR body checklist. |
-| `system/maploader_new/` | Draft editor-first map data model (rework in progress, #35). |
+| `system/maploader/` | Editor-first map data model (`MapDB`, manifests, markers, validation). |
 | `game/maps/` | Built-in map DB resource and map content. |
 | `game/main.tscn` | Current main scene. |
 

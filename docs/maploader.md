@@ -1,6 +1,7 @@
 # Map Loader
 
-**Status:** Active — Phase 0 closed 2026-11-13; data model finalized.
+**Status:** Active — Phase 0 closed 2026-11-13; Phase 1 (data model) closed
+2026-11-13. Phase 2 is gated on #40.
 
 The rework moves map data authoring into the Godot editor and treats the
 editor's resource graph as the authority:
@@ -17,48 +18,81 @@ editor's resource graph as the authority:
   completion, no scene transitions). Async loading is a separate v2 issue
   ([#36](https://github.com/simonkuhlo/unrelated-vibe-game/issues/36)).
 
-## Phase 0 decisions (2026-11-13)
-
-### Data model
+## Data model
 
 - **`MapDB`** (`Resource`, `@tool`): `@export var maps: Array[MapManifest]`. Linear
   lookup, no runtime index/cache. `add_map()`, `remove_map()`, `get_map(id)`,
-  `has_map(id)`, `get_maps(filter: MapFilter)`, `get_map_ids()`.
-- **`MapManifest`** (`Resource`, `@tool`): v1 fields are `id`, `scene`, `display_name`,
-  `thumbnail`. `version` is dropped; version metadata returns with packs (#17).
-- **`MapScene`** (`Node3D`): map root exposing a single `Markers` root via a typed
-  node export. Game-specific markers live in `game/` on a game-level subclass.
-- **`MapMarker`** (`Marker3D`): base marker class. Only this ships in v1; typed
-  markers are built on demand in `game/`.
-- **`MapMarkerCollection`** (`Node3D`): script on the `Markers` root with
+  `has_map(id)`, `get_maps(filter: MapFilter = null)`, `get_map_ids()`,
+  `validate()`, `is_valid()`, `is_validated`. `get_maps()` always returns an
+  independent array copy that skips null rows.
+- **`MapManifest`** (`Resource`, `@tool`): v1 fields are `id`, `scene`,
+  `display_name`, `thumbnail`. `version` is dropped; version metadata returns with
+  packs (#17). `id` must match `^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$` — lowercase
+  `snake_case`, single underscores, starting with a letter.
+- **`MapScene`** (`Node3D`, `@tool`): map root with `markers: MapMarkerCollection`,
+  assigned to a `Markers` child via a typed node export. No other marker API is
+  exposed. Game-specific markers live in `game/` on a game-level subclass.
+- **`MapMarker`** (`Marker3D`, `@tool`): base marker class. Only this ships in v1;
+  typed markers are built on demand in `game/`.
+- **`MapMarkerCollection`** (`Node3D`, `@tool`): script on the `Markers` root with
   `get_markers(filter: MapMarkerFilter = null) -> Array[MapMarker]`.
-- **`MapFilter` / `MapMarkerFilter`** (`Resource`): filter base types with a
-  default `matches()` returning true. Concrete filters are deferred.
-- **`MapValidationIssue`**: `severity` (`ERROR`/`WARNING`), `code` (`StringName`),
-  `message`, and context. Components expose `validate() -> Array[MapValidationIssue]`.
-- **`MapValidator`**: thin aggregator for cross-object/content checks. No god object.
+- **`MapFilter` / `MapMarkerFilter`** (`Resource`, `@tool`): filter base types
+  with a default `matches()` returning true. Concrete filters are deferred.
+- **`MapValidationIssue`** (`RefCounted`, `@tool`): `severity` (`ERROR`/`WARNING`),
+  `code` (`StringName`), `message`, and `context`. `is_error()`,
+  `format_string()`, and the shared static helpers `has_errors()`,
+  `format_all()`, `log_all()`.
+- **`MapValidator`** (`RefCounted`, `@tool`): thin aggregator for cross-object
+  and null-safe checks. No god object; rules live on the owning component.
 
-### Identity and validation
+## Identity and validation
 
-- `manifest.id` is the sole identity. Format: `StringName`, lowercase `snake_case`.
-- Ids are read-only at runtime. Editing an id at editor time does not require
-  re-adding the map.
-- `MapDB` tracks a validation state. If modified and not manually revalidated, it
-  must be revalidated before the loader uses it. Duplicate checking is part of
-  validation, not a separate editor mechanism.
-- Validation triggers: `@export_tool_button("Validate")` on `MapDB`, `MapManifest`,
-  and `MapScene`; `MapScene._get_configuration_warnings()`; CI content test.
-  No custom `EditorInspectorPlugin` in v1.
+- `manifest.id` is the sole identity. Ids are read-only at runtime. Editing an id
+  at editor time does not require re-adding the map.
+- `MapDB.is_validated` is **advisory state**: it records that `validate()` ran
+  after the last mutation of the DB (`add_map`, `remove_map`, `clear_db`, or a
+  `maps` property assignment). It does not observe manifest field edits, and
+  direct element mutation (`db.maps.append(...)`) bypasses it. Use the `MapDB`
+  API for runtime changes.
+- A loader must call `validate()` before using a DB; `is_validated == true` alone
+  is not proof that the content is valid. `MapDB.is_valid()` runs validation and
+  reports whether there are ERROR issues.
+- Components return `Array[MapValidationIssue]` from `validate()`. IDs are unique
+  per DB and duplicate detection is part of validation, not a separate editor
+  mechanism.
+- Validation triggers: `@export_tool_button("Validate")` on `MapDB`,
+  `MapManifest`, `MapScene`, and `MapMarkerCollection`;
+  `MapScene._get_configuration_warnings()`; the CI content test. No custom
+  `EditorInspectorPlugin` in v1.
+- Tool buttons call `MapValidationIssue.log_all()`. Godot discards a tool
+  callable's return value, so returning issues without logging would make the
+  button silently do nothing. Errors and warnings land in the editor
+  Output/Errors panel.
+- `MapScene._get_configuration_warnings()` surfaces **all** issues (errors and
+  warnings), so validation results that only raise warnings are still visible in
+  the scene dock.
 
-### Loader
+### Authoring a built-in map
+
+1. Create `game/maps/<map_id>/`; the folder name matches `manifest.id`.
+2. Add `map_manifest.tres` (`MapManifest`) and `map_scene.tscn` (`MapScene` with a
+   `Markers` child using `MapMarkerCollection`).
+3. Add the manifest to `game/maps/map_db.tres` through the inspector.
+4. Click **Validate** on the manifest, scene, and DB and fix every ERROR.
+5. Run `pwsh ./scripts/verify.ps1`. The content test is the CI authority for the
+   built-in DB.
+
+## Loader
 
 - Configured through exports on the loader node (`map_db: MapDB`, `map_host: Node3D`),
   not `setup(db, host)`.
 - The loader API, host contract, and unload semantics are **deferred to #40**.
+  Phase 2 (`MapLoader`, `LoadedMap`, error types) must not start before #40 is
+  closed.
 
 ## File layout
 
-```
+```text
 system/maploader/
   map_db.gd                 # MapDB
   map_manifest.gd           # MapManifest
@@ -69,6 +103,7 @@ system/maploader/
   map_filter.gd             # MapFilter
   map_validation_issue.gd   # MapValidationIssue
   map_validator.gd          # MapValidator (thin aggregator)
+  # Phase 2, planned (gated on #40):
   map_load_error.gd         # MapLoadError
   map_load_result.gd        # MapLoadResult
   loaded_map.gd             # LoadedMap
@@ -90,7 +125,7 @@ system/maploader/
 
 ## Related
 
-- [Maploader Design Session Roadmap](maploader-design-session-roadmap.md)
+- [Maploader Roadmap](maploader-roadmap.md)
 - [Issue #40: loader API/host contract/unload semantics](https://github.com/simonkuhlo/unrelated-vibe-game/issues/40)
 - [Issue #13: synchronous v1 loader](https://github.com/simonkuhlo/unrelated-vibe-game/issues/13)
 - [Issue #15: Main bootstrap and map browser](https://github.com/simonkuhlo/unrelated-vibe-game/issues/15)
