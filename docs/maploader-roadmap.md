@@ -1,4 +1,4 @@
-# Maploader Design Session Roadmap
+# Maploader Roadmap
 
 **Status:** Active — Phase 0 closed 2026-11-13.
 
