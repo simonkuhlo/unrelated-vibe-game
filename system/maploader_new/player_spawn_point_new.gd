@@ -1,2 +1,0 @@
-extends SpawnPointNew
-class_name PlayerSpawnpointNew
