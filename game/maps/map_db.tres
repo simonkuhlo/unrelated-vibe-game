@@ -1,6 +1,5 @@
 [gd_resource type="Resource" script_class="MapDB" format=3 uid="uid://btrfv3nfr8sj2"]
 
-[ext_resource type="Script" path="res://system/maploader/map_manifest.gd" id="1_i8pya"]
 [ext_resource type="Script" path="res://system/maploader/map_db.gd" id="2_i8pya"]
 [ext_resource type="Resource" uid="uid://ece5ts58yxd2" path="res://game/maps/test_box/map_manifest.tres" id="2_ycn4g"]
 

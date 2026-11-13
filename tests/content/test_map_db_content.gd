@@ -32,4 +32,4 @@ func test_map_db_content_resolves() -> void:
 			var instance := auto_free(manifest.scene.instantiate()) as Node
 			assert_that(instance).override_failure_message("Failed to instantiate map scene for '%s'" % id).is_not_null()
 			if instance is MapScene:
-				assert_that((instance as MapScene).marker_root).override_failure_message("MapScene '%s' has no marker_root assigned" % id).is_not_null()
+				assert_that((instance as MapScene).markers).override_failure_message("MapScene '%s' has no markers root assigned" % id).is_not_null()

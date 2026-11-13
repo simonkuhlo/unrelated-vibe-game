@@ -2,21 +2,27 @@
 class_name MapScene
 extends Node3D
 
-@export var marker_root: MapMarkerCollection
+## Root node of a map scene. It exposes a single `Markers` child (a
+## `MapMarkerCollection`) so consumers query markers through one typed root.
+## Game-specific marker types are built on `game/` subclasses, not here.
 
-@export_tool_button("Validate") var _button_validate: Callable = validate
+@export var markers: MapMarkerCollection
+
+@export_tool_button("Validate") var _button_validate: Callable = _validate_from_editor
+
 
 func validate() -> Array[MapValidationIssue]:
 	var issues: Array[MapValidationIssue] = []
-	if marker_root == null:
-		issues.append(MapValidationIssue.new(MapValidationIssue.Severity.ERROR, &"marker_root_missing", "Marker root is not assigned.", self))
+	if markers == null:
+		issues.append(MapValidationIssue.new(MapValidationIssue.Severity.ERROR, &"markers_missing", "Markers root is not assigned.", self))
 	else:
-		issues.append_array(marker_root.validate())
+		issues.append_array(markers.validate())
 	return issues
 
+
 func _get_configuration_warnings() -> PackedStringArray:
-	var warnings := PackedStringArray()
-	for issue in validate():
-		if issue.severity == MapValidationIssue.Severity.ERROR:
-			warnings.append(issue.format_string())
-	return warnings
+	return MapValidationIssue.format_all(validate())
+
+
+func _validate_from_editor() -> void:
+	MapValidationIssue.log_all(self, validate())

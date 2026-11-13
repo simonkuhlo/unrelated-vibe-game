@@ -46,12 +46,12 @@ tests/
   tools/              # tooling invoked by scripts/ (excluded from exports)
 ```
 
-Map loader suites return with the editor-first rework (#35); replacement
-coverage is tracked in #18. Keep unit tests free of scene dependencies.
-Maploader test scope: `MapDB` add/get/remove and duplicate rejection / validation
-state, `MapManifest` field validation, `MapMarkerCollection` depth-first query order,
-`MapScene` composition with the `Markers` root, and content resolution for every
-built-in DB entry.
+Maploader suites: `MapDB` add/get/remove, validation state, copy/filter behavior;
+`MapManifest` field validation (including snake_case ids); `MapMarkerCollection`
+depth-first order and filtering; `MapScene` composition with the `Markers` root;
+`MapValidationIssue`/`MapValidator` helpers; and content resolution for every
+built-in DB entry. `tests/content/test_map_db_content.gd` is the CI authority for
+built-in map content.
 
 Suite files are named `test_*.gd` and extend `GdUnitTestSuite`. Test methods
 start with `test_`. Discovery is by directory and base class; there is no

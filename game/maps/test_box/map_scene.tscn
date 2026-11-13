@@ -4,12 +4,12 @@
 [ext_resource type="Script" uid="uid://d2jfb53w4ts1u" path="res://system/maploader/map_marker_collection.gd" id="2_q12n3"]
 [ext_resource type="Script" uid="uid://cl876qmy75kxb" path="res://system/maploader/map_marker.gd" id="3_ayohf"]
 
-[node name="MapScene" type="Node3D" unique_id=1754032060 node_paths=PackedStringArray("marker_root")]
+[node name="MapScene" type="Node3D" unique_id=1754032060 node_paths=PackedStringArray("markers")]
 script = ExtResource("1_vp0su")
-marker_root = NodePath("MapMarkerCollection")
+markers = NodePath("Markers")
 
-[node name="MapMarkerCollection" type="Node3D" parent="." unique_id=1027897114]
+[node name="Markers" type="Node3D" parent="." unique_id=1027897114]
 script = ExtResource("2_q12n3")
 
-[node name="MapMarker" type="Marker3D" parent="MapMarkerCollection" unique_id=81147491]
+[node name="MapMarker" type="Marker3D" parent="Markers" unique_id=81147491]
 script = ExtResource("3_ayohf")
