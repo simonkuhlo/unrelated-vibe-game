@@ -51,7 +51,8 @@ Maploader suites: `MapDB` add/get/remove, validation state, copy/filter behavior
 depth-first order and filtering; `MapScene` composition with the `Markers` root;
 `MapValidationIssue`/`MapValidator` helpers; and content resolution for every
 built-in DB entry. `tests/content/test_map_db_content.gd` is the CI authority for
-built-in map content.
+built-in map content: it requires a `MapScene` root, a markers root, and a clean
+`MapScene.validate()` result for every map.
 
 Suite files are named `test_*.gd` and extend `GdUnitTestSuite`. Test methods
 start with `test_`. Discovery is by directory and base class; there is no
