@@ -62,7 +62,8 @@ implementation issues above.
 
 ## Related
 
-- [Issue #35: editor-first maploader rework](https://github.com/simonkuhlo/unrelated-vibe-game/issues/35)
+- [Maploader Design Session Roadmap](maploader-design-session-roadmap.md)
+- [Issue #38: housekeeping and issue graph cleanup](https://github.com/simonkuhlo/unrelated-vibe-game/issues/38)
 - [Issue #13: synchronous v1 loader](https://github.com/simonkuhlo/unrelated-vibe-game/issues/13)
 - [Issue #15: Main bootstrap and map browser](https://github.com/simonkuhlo/unrelated-vibe-game/issues/15)
 - [Issue #18: tests for the new data model](https://github.com/simonkuhlo/unrelated-vibe-game/issues/18)
