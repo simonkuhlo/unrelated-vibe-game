@@ -9,7 +9,11 @@ extends Node3D
 ## Validation requires the assigned collection to be a direct child of this
 ## scene and warns when the node is not named `Markers`.
 
-@export var markers: MapMarkerCollection
+@export var markers: MapMarkerCollection:
+	set(value):
+		markers = value
+		# Keep the scene dock warnings in sync when the root is reassigned.
+		update_configuration_warnings()
 
 @export_tool_button("Validate") var _button_validate: Callable = _validate_from_editor
 
@@ -27,6 +31,7 @@ func validate() -> Array[MapValidationIssue]:
 			"Markers root must be a direct child of the map scene.",
 			markers
 		))
+		return issues
 	if markers.name != &"Markers":
 		issues.append(MapValidationIssue.new(
 			MapValidationIssue.Severity.WARNING,

@@ -11,11 +11,27 @@ class IdFilter extends MapFilter:
 		return manifest.id == allowed
 
 
+func _make_valid_packed_scene() -> PackedScene:
+	var scene := PackedScene.new()
+	var map_scene := MapScene.new()
+	var collection := MapMarkerCollection.new()
+	collection.name = "Markers"
+	map_scene.add_child(collection)
+	collection.owner = map_scene
+	var marker := MapMarker.new()
+	collection.add_child(marker)
+	marker.owner = map_scene
+	map_scene.markers = collection
+	scene.pack(map_scene)
+	map_scene.free()
+	return scene
+
+
 func _make_manifest(id: StringName, display_name: String = "Map") -> MapManifest:
 	var manifest := MapManifest.new()
 	manifest.id = id
 	manifest.display_name = display_name
-	manifest.scene = PackedScene.new()
+	manifest.scene = _make_valid_packed_scene()
 	return manifest
 
 
@@ -40,9 +56,7 @@ func test_map_db_duplicate_validation() -> void:
 	db.add_map(_make_manifest(&"box", "Box 1"))
 	db.add_map(_make_manifest(&"box", "Box 2"))
 
-	assert_bool(db.is_validated).is_false()
 	var issues := db.validate()
-	assert_bool(db.is_validated).is_true()
 	assert_bool(db.is_valid()).is_false()
 
 	var has_duplicate_error := false
@@ -53,38 +67,10 @@ func test_map_db_duplicate_validation() -> void:
 	assert_bool(has_duplicate_error).is_true()
 
 
-func test_map_db_validation_state_tracks_mutations() -> void:
-	var db := MapDB.new()
-	db.validate()
-	assert_bool(db.is_validated).is_true()
-
-	db.add_map(_make_manifest(&"alpha"))
-	assert_bool(db.is_validated).is_false()
-
-	db.validate()
-	db.remove_map(&"alpha")
-	assert_bool(db.is_validated).is_false()
-
-	db.validate()
-	db.clear_db()
-	assert_bool(db.is_validated).is_false()
-
-
-func test_map_db_property_assignment_resets_validation() -> void:
-	var db := MapDB.new()
-	db.validate()
-	assert_bool(db.is_validated).is_true()
-
-	var replacement: Array[MapManifest] = [_make_manifest(&"alpha")]
-	db.maps = replacement
-	assert_bool(db.is_validated).is_false()
-
-
 func test_map_db_validates_clean_content() -> void:
 	var db := MapDB.new()
 	db.add_map(_make_manifest(&"alpha"))
 	assert_bool(db.is_valid()).is_true()
-	assert_bool(db.is_validated).is_true()
 
 
 func test_map_db_get_maps_returns_independent_copy() -> void:

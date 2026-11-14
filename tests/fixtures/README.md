@@ -3,6 +3,5 @@
 Shared test scenes, resources, and small data files. Keep fixtures minimal and
 deterministic; do not copy large production assets here.
 
-Fixtures are excluded from exports. The old map catalog/manifest fixtures were
-removed with the superseded maploader model (#35); replacement fixtures for the
-editor-first data model arrive with #18.
+Fixtures are excluded from exports. Unit and content tests use inline resource
+construction and built-in map content under `game/maps/`.
