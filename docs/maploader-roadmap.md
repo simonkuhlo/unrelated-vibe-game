@@ -15,7 +15,7 @@ establish the v1 contracts.
 - [x] Finalize the DB shape/identity (`MapDB` array, `manifest.id` sole identity).
 - [x] Finalize the manifest fields (v1: `id`, `scene`, `display_name`, `thumbnail`; `version` dropped).
 - [x] Finalize the `MapScene` marker contract (`Markers` root, `MapMarker`, filter-based API).
-- [x] Finalize validation ownership and error surfacing (structured issues, `MapDB` validation state).
+- [x] Finalize validation ownership and error surfacing (structured issues, no validation cache).
 - [x] Finalize loader API/unload semantics — **deferred to #40**.
 - [x] Create #40 for the deferred loader design discussion.
 
@@ -29,7 +29,7 @@ establish the v1 contracts.
 
 Phase 1 closeout follow-ups landed in #44: strict snake_case ids, `MapScene.markers`
 and the `Markers` node name aligned with decision A8, validation feedback from tool
-buttons, and validation-state/tests/docs cleanup. Phase 1 review follow-ups landed
+buttons, and validation/tests/docs cleanup. Phase 1 review follow-ups landed
 in #46: stronger content-test scene checks, marker-root validation, stricter ID
 handling, and documentation of the id/validation conventions. Design-level
 leftovers are tracked in #47.
@@ -50,7 +50,7 @@ leftovers are tracked in #47.
 | # | Decision |
 |---|---|
 | A1 | `MapDB.maps: Array[MapManifest]` + linear lookup. No runtime index/cache. |
-| A2 | `manifest.id` is the sole identity. Duplicates detected by `MapDB.validate()`. Ids read-only at runtime. `MapDB` tracks validation state — must be revalidated before the loader uses it. No custom inspector plugin. |
+| A2 | `manifest.id` is the sole identity. Duplicates detected by `MapDB.validate()`. Ids read-only at runtime. No custom inspector plugin. |
 | A3 | Id format: `StringName`, lowercase `snake_case`. |
 | A4 | `version` dropped from the v1 manifest. |
 | A5 | `id`, `scene`, `display_name` required; `thumbnail` warning only. |
@@ -65,6 +65,12 @@ leftovers are tracked in #47.
 | A14 | Validation triggers: `@export_tool_button("Validate")` on `MapDB`/`MapManifest`/`MapScene`, `_get_configuration_warnings()`, CI content test. No editor plugin. |
 | A15 | Loader configured through exports on the loader node (`map_db`, `map_host`), not `setup(db, host)`. |
 | A16 | Loader API, host contract, and unload semantics deferred to #40. |
+
+### Decisions (2026-11-14)
+
+| # | Decision |
+|---|---|
+| A17 | No validation cache. `MapDB` has no validation-state flag; the loader always calls `validate()` on load. |
 
 ## Deferred items
 

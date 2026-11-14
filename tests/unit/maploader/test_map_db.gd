@@ -56,9 +56,7 @@ func test_map_db_duplicate_validation() -> void:
 	db.add_map(_make_manifest(&"box", "Box 1"))
 	db.add_map(_make_manifest(&"box", "Box 2"))
 
-	assert_bool(db.validation_ran).is_false()
 	var issues := db.validate()
-	assert_bool(db.validation_ran).is_true()
 	assert_bool(db.is_valid()).is_false()
 
 	var has_duplicate_error := false
@@ -69,38 +67,10 @@ func test_map_db_duplicate_validation() -> void:
 	assert_bool(has_duplicate_error).is_true()
 
 
-func test_map_db_validation_state_tracks_mutations() -> void:
-	var db := MapDB.new()
-	db.validate()
-	assert_bool(db.validation_ran).is_true()
-
-	db.add_map(_make_manifest(&"alpha"))
-	assert_bool(db.validation_ran).is_false()
-
-	db.validate()
-	db.remove_map(&"alpha")
-	assert_bool(db.validation_ran).is_false()
-
-	db.validate()
-	db.clear_db()
-	assert_bool(db.validation_ran).is_false()
-
-
-func test_map_db_property_assignment_resets_validation() -> void:
-	var db := MapDB.new()
-	db.validate()
-	assert_bool(db.validation_ran).is_true()
-
-	var replacement: Array[MapManifest] = [_make_manifest(&"alpha")]
-	db.maps = replacement
-	assert_bool(db.validation_ran).is_false()
-
-
 func test_map_db_validates_clean_content() -> void:
 	var db := MapDB.new()
 	db.add_map(_make_manifest(&"alpha"))
 	assert_bool(db.is_valid()).is_true()
-	assert_bool(db.validation_ran).is_true()
 
 
 func test_map_db_get_maps_returns_independent_copy() -> void:

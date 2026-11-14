@@ -5,19 +5,13 @@ extends Resource
 ## Ordered list of built-in maps. `manifest.id` is the sole identity; lookups
 ## are linear and there is no runtime index or cache.
 ##
-## Validation state is advisory: `validation_ran` only records that `validate()`
-## ran after the last mutation of this DB. It does not observe manifest field
-## edits, so a loader must call `validate()` before using the DB.
+## There is no validation cache: callers, including the loader, must run
+## `validate()` before using the DB.
 ##
 ## `validate()` checks manifest fields, ID format, uniqueness, folder location
 ## conventions, and scene content (including structure and marker validation).
 
-@export var maps: Array[MapManifest] = []:
-	set(value):
-		maps = value
-		validation_ran = false
-
-var validation_ran: bool = false
+@export var maps: Array[MapManifest] = []
 
 @export_tool_button("Validate") var _button_validate: Callable = _validate_from_editor
 
@@ -40,7 +34,6 @@ func validate() -> Array[MapValidationIssue]:
 			issues.append(MapValidationIssue.new(MapValidationIssue.Severity.ERROR, &"duplicate_map_id", "Duplicate map ID: %s" % manifest.id, manifest))
 		seen_ids[manifest.id] = true
 
-	validation_ran = true
 	return issues
 
 
@@ -82,21 +75,18 @@ func get_map_ids() -> Array[StringName]:
 func add_map(manifest: MapManifest) -> void:
 	if manifest and not maps.has(manifest):
 		maps.append(manifest)
-		validation_ran = false
 
 
 func remove_map(id: StringName) -> void:
 	for i in range(maps.size() - 1, -1, -1):
 		if maps[i] and maps[i].id == id:
 			maps.remove_at(i)
-			validation_ran = false
 
 
 ## Editor-only helper for clearing the built-in list. Runtime code should not
 ## rely on clearing the shared DB.
 func clear_db() -> void:
 	maps.clear()
-	validation_ran = false
 
 
 func _validate_from_editor() -> void:

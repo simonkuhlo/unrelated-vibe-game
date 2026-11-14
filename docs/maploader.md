@@ -23,8 +23,8 @@ editor's resource graph as the authority:
 - **`MapDB`** (`Resource`, `@tool`): `@export var maps: Array[MapManifest]`. Linear
   lookup, no runtime index/cache. `add_map()`, `remove_map()`, `get_map(id)`,
   `has_map(id)`, `get_maps(filter: MapFilter = null)`, `get_map_ids()`,
-  `validate()`, `is_valid()`, `validation_ran`. `get_maps()` always returns an
-  independent array copy that skips null rows.
+  `validate()`, `is_valid()`. `get_maps()` always returns an independent array
+  copy that skips null rows. There is no validation cache.
 - **`MapManifest`** (`Resource`, `@tool`): v1 fields are `id`, `scene`,
   `display_name`, `thumbnail`. `version` is dropped; version metadata returns with
   packs (#17). `id` must match `^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$` — lowercase
@@ -53,14 +53,10 @@ editor's resource graph as the authority:
   convention, like the array copies returned by `get_maps()`; the export is not
   enforced as immutable. Editing an id at editor time does not require re-adding
   the map.
-- `MapDB.validation_ran` is **advisory state**: it records that `validate()` ran
-  after the last mutation of the DB (`add_map`, `remove_map`, `clear_db`, or a
-  `maps` property assignment). It does not observe manifest field edits, and
-  direct element mutation (`db.maps.append(...)`) bypasses it. Use the `MapDB`
-  API for runtime changes.
-- A loader must call `validate()` before using a DB; `validation_ran == true`
-  alone is not proof that the content is valid. `MapDB.is_valid()` runs
-  validation and reports whether there are ERROR issues.
+- There is no validation cache. `MapDB` does not track whether validation ran;
+  the loader always calls `validate()` when it loads a DB, and editor tooling
+  re-runs it on demand. `MapDB.is_valid()` runs validation and reports whether
+  there are ERROR issues.
 - Components return `Array[MapValidationIssue]` from `validate()`. IDs are unique
   per DB and duplicate detection is part of validation, not a separate editor
   mechanism.
@@ -93,6 +89,8 @@ editor's resource graph as the authority:
 
 - Configured through exports on the loader node (`map_db: MapDB`, `map_host: Node3D`),
   not `setup(db, host)`.
+- The loader always validates the configured DB on load. There is no cached
+  validation state to trust or invalidate.
 - The loader API, host contract, and unload semantics are **deferred to #40**.
   Phase 2 (`MapLoader`, `LoadedMap`, error types) must not start before #40 is
   closed.
@@ -125,7 +123,7 @@ system/maploader/
 ## Deferred items
 
 - Loader API, host contract, and unload semantics — [#40](https://github.com/simonkuhlo/unrelated-vibe-game/issues/40).
-- Phase 1 review leftovers (scene-validation ownership, validation-state API, game marker subclass) — [#47](https://github.com/simonkuhlo/unrelated-vibe-game/issues/47).
+- Phase 1 review leftovers (scene-validation ownership, game marker subclass, editor validation UX) — [#47](https://github.com/simonkuhlo/unrelated-vibe-game/issues/47).
 - Async loader — [#36](https://github.com/simonkuhlo/unrelated-vibe-game/issues/36).
 - Downloadable packs — [#17](https://github.com/simonkuhlo/unrelated-vibe-game/issues/17).
 - Content hashing — [#16](https://github.com/simonkuhlo/unrelated-vibe-game/issues/16).

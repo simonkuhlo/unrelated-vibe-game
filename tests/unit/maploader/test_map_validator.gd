@@ -33,7 +33,6 @@ func test_validate_db_forwards_to_the_database() -> void:
 	db.add_map(manifest)
 
 	assert_array(MapValidator.validate_db(db)).is_empty()
-	assert_bool(db.validation_ran).is_true()
 
 
 func test_validate_manifest_returns_issues() -> void:
