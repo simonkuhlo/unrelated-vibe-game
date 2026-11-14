@@ -59,7 +59,7 @@ game-level marker subclass moved to #40.
 | A6 | `get_maps(filter: MapFilter)` returns an array copy; read-only is a documented convention. `clear_db` is editor-only. |
 | A7 | Plain array inspector; no `quick_add_map`. |
 | A8 | `MapScene` exposes only a `Markers` root via a typed node export. Game-level subclass for game-specific markers. |
-| A9 | `MapMarker extends Marker3D`; `MapMarkerCollection extends Node3D`; filter-based API. Only the base `MapMarker` ships in v1. |
+| A9 | `MapMarker extends Marker3D`; `MapMarkerCollection extends Node3D`; filter-based API. Core system ships only base classes in `system/maploader/`; game-specific marker subclasses live in `game/` (e.g. #50). |
 | A10 | Multiplayer spawn indexing/selection is out of scope for this system. |
 | A11 | `SpawnPoint`/`PlayerSpawnPoint`/`ItemSpawnPoint` are not maploader v1 classes. A game-level `PlayerSpawnPoint` is decided in A29. |
 | A12 | `MapScene` does not shortcut the `Markers` API. |
@@ -83,12 +83,12 @@ game-level marker subclass moved to #40.
 | # | Decision |
 |---|---|
 | A22 | `load_map(id) -> MapLoadResult` emits one terminal `load_finished(result)` signal synchronously before returning. |
-| A23 | Standalone `MapLoadError` enum with specific codes; `MapLoadResult` carries code, manifest, handle, and issues. |
+| A23 | Standalone `MapLoadError` enum with specific codes (`SCENE_MISSING`, `INVALID_SCENE`, `INVALID_MANIFEST`, etc.) and strict check precedence. `MapLoadResult` carries code, manifest, handle, and issues. |
 | A24 | Single-flight: reject with `ALREADY_LOADED`; failed loads leave the active map untouched. |
 | A25 | Host must be in-tree, empty, and not an ancestor of the loader; host owns placement. |
-| A26 | `LoadedMap` is a thin handle, invalidated immediately on unload. |
+| A26 | `LoadedMap` is a thin handle, invalidated immediately on unload (`id`/`manifest` remain readable post-unload). |
 | A27 | `unload()` is idempotent; emit `map_unloaded` once for real unloads only. |
-| A28 | Loader runs DB-wide validation but only target-scoped ERRORs block a load. |
+| A28 | Loader runs DB-wide validation; only target-scoped ERRORs block a load, classified into `SCENE_MISSING`, `INVALID_SCENE`, or `INVALID_MANIFEST`. Non-fatal issues log with `push_warning`. |
 | A29 | `PlayerSpawnPoint`/`PlayerSpawnFilter` live in `game/` and land with #15 via #50; no spawn API on the loader. |
 
 Full contract: [maploader.md](maploader.md#loader).

@@ -34,12 +34,11 @@ editor's resource graph as the authority:
   exposed. Validation requires the collection to be a direct child and warns
   when the node is not named `Markers`. Game-specific markers live in `game/` on
   a game-level subclass.
-- **`MapMarker`** (`Marker3D`, `@tool`): base marker class. Only this ships in v1;
-  typed markers are built on demand in `game/`.
+- **`MapMarker`** (`Marker3D`, `@tool`): base marker class. Core system ships only this base class in `system/maploader/`; game-specific marker subclasses live in `game/` (e.g. #50).
 - **`MapMarkerCollection`** (`Node3D`, `@tool`): script on the `Markers` root with
   `get_markers(filter: MapMarkerFilter = null) -> Array[MapMarker]`.
 - **`MapFilter` / `MapMarkerFilter`** (`Resource`, `@tool`): filter base types
-  with a default `matches()` returning true. Concrete filters are deferred.
+  with a default `matches()` returning true. Core system ships generic base types; game-specific filters live in `game/`.
 - **`MapValidationIssue`** (`RefCounted`, `@tool`): `severity` (`ERROR`/`WARNING`),
   `code` (`StringName`), `message`, and `context`. `is_error()`,
   `format_string()`, and the shared static helpers `has_errors()`,
@@ -107,36 +106,41 @@ validation state, so it calls `MapDB.validate()` on every load (A17).
 - `is_loaded() -> bool` and `get_loaded_map() -> LoadedMap`.
 - `MapLoadError` is a standalone enum; `MapLoadResult` carries the outcome.
 
-### Error surface
+### Error surface and check precedence
 
 `MapLoadError.Code`: `NONE` (success), `NOT_FOUND`, `DB_INVALID`,
 `HOST_INVALID`, `HOST_OCCUPIED`, `ALREADY_LOADED`, `INVALID_MANIFEST`,
 `SCENE_MISSING`, `INVALID_SCENE`.
 
 `MapLoadResult` (`RefCounted`) exposes `code`, `manifest`, `map`, `issues`
-(`Array[MapValidationIssue]`), `is_ok()`, and `format_message()`.
+(`Array[MapValidationIssue]`), `is_ok()`, and `format_message()`. `issues` carries
+the target-scoped issues when loading fails due to validation.
 
-| Situation | Code |
-|---|---|
-| Empty id or id not in the DB | `NOT_FOUND` |
-| `map_db` is null, or the DB has fatal DB-level errors for the target | `DB_INVALID` |
-| `map_host` is null, not in the tree, or the loader is a descendant of the host | `HOST_INVALID` |
-| The host already has children | `HOST_OCCUPIED` |
-| A map is already loaded | `ALREADY_LOADED` |
-| The target manifest fails validation with ERRORs | `INVALID_MANIFEST` |
-| `manifest.scene` is null | `SCENE_MISSING` |
-| Instantiation fails or the root is not a `MapScene` | `INVALID_SCENE` |
+#### Deterministic execution order
 
-### Validation scope
+Every `load_map(id)` call executes checks in the following strict order:
+
+1. `DB_INVALID`: `map_db` is `null`.
+2. `NOT_FOUND`: `id` is empty or `map_db.get_map(id)` returns `null`.
+3. `HOST_INVALID`: `map_host` is `null`, not in tree (`is_inside_tree() == false`), or loader is a descendant of `map_host`.
+4. `ALREADY_LOADED`: A map is currently loaded (`is_loaded() == true`).
+5. `HOST_OCCUPIED`: `map_host.get_child_count() > 0`.
+6. **Validation & Classification**: Run `map_db.validate()`. If target-scoped ERRORs exist:
+   - Target-scoped issues are issues where `context` is the target `MapManifest`, or `duplicate_map_id` issues for the target `id`.
+   - If target issues contain `scene_missing` (or `manifest.scene == null`) → return `SCENE_MISSING`.
+   - Else if target issues contain `scene_instantiate_failed` or `scene_root_invalid` → return `INVALID_SCENE`.
+   - Else → return `INVALID_MANIFEST`.
+7. `NONE`: Target validation passed. Instantiate scene, add root under `map_host`, set transform to identity, construct `LoadedMap`, emit `load_finished(result)` synchronously, and return `result`.
+
+### Validation scope and logging
 
 `MapDB.validate()` is DB-wide (A18), but the loader's failure scope is
 target-scoped:
 
 - Fatal: ERROR issues whose `context` is the requested manifest, plus
   duplicate-id ERRORs for the requested id.
-- Non-fatal: every other issue. The loader logs them with
-  `MapValidationIssue.log_all()` and still loads, so one broken map cannot block
-  every map in the DB.
+- Non-fatal: every other issue (issues belonging to other maps in the DB or null manifest slots).
+  The loader logs non-fatal issues using `push_warning()` so that broken non-target maps emit diagnostic warnings without triggering engine/gdUnit error aborts (`push_error`). One broken map cannot block every map in the DB.
 - WARNINGs never block.
 
 ### Host contract
@@ -147,8 +151,7 @@ target-scoped:
 - The loader adds the map root as a direct child of the host and resets the
   root's transform to identity. The host transform owns placement; maps do not
   re-place themselves.
-- The loader owns and frees only the map root it added. It never frees gamemode
-  nodes or other host children.
+- The loader owns and frees only the map root it added. It never frees host children created outside the loader.
 
 ### Single-flight
 
@@ -164,8 +167,7 @@ target-scoped:
 - `LoadedMap` is a thin `RefCounted` handle: `id`, `manifest`, `root`
   (`MapScene`), and `is_valid()`. It is not a marker facade; query markers
   through `root.markers` (A12).
-- Unload invalidates the handle immediately, even though the node is freed with
-  `queue_free()`.
+- Unload invalidates the handle (`is_valid() == false`) immediately. On an invalidated handle, `root` returns `null`, while `id` and `manifest` remain accessible for identification/logging.
 - The loader settles state before emitting a signal, so handlers may call
   `unload()` (which unloads normally) or `load_map()` (which returns
   `ALREADY_LOADED`).
@@ -185,12 +187,12 @@ target-scoped:
 | # | Decision |
 |---|---|
 | A22 | `load_map(id) -> MapLoadResult` emits one terminal `load_finished(result)` signal synchronously before returning. No split success/failure signals. |
-| A23 | Standalone `MapLoadError` enum (`NONE`, `NOT_FOUND`, `DB_INVALID`, `HOST_INVALID`, `HOST_OCCUPIED`, `ALREADY_LOADED`, `INVALID_MANIFEST`, `SCENE_MISSING`, `INVALID_SCENE`). `MapLoadResult` carries `code`, `manifest`, `map`, `issues`, `is_ok()`, `format_message()`. |
+| A23 | Standalone `MapLoadError` enum (`NONE`, `NOT_FOUND`, `DB_INVALID`, `HOST_INVALID`, `HOST_OCCUPIED`, `ALREADY_LOADED`, `INVALID_MANIFEST`, `SCENE_MISSING`, `INVALID_SCENE`). `MapLoadResult` carries `code`, `manifest`, `map`, `issues`, `is_ok()`, `format_message()`. Execution order determines precedence. |
 | A24 | Single-flight: reject a second load with `ALREADY_LOADED`; a failed load leaves the active map untouched. No auto-unload/replace in v1. |
 | A25 | `map_host: Node3D` must be in-tree and empty; the loader must not be a descendant of the host. The loader adds the map root under the host and resets it to identity; the host owns placement. |
-| A26 | `LoadedMap` is a thin `RefCounted` handle (`id`, `manifest`, `root`, `is_valid()`), not a marker facade, invalidated immediately on unload. |
+| A26 | `LoadedMap` is a thin `RefCounted` handle (`id`, `manifest`, `root`, `is_valid()`), not a marker facade, invalidated immediately on unload. `id` and `manifest` remain readable post-unload. |
 | A27 | `unload()` is idempotent: detach, invalidate, `queue_free()`, clear state, emit `map_unloaded` once for real unloads only. Externally freed/detached roots count as no longer loaded. |
-| A28 | The loader always runs DB-wide `validate()`, but only target-scoped ERRORs (context is the requested manifest, plus duplicate ids for that id) block the load. Other issues are logged. This refines A18's loader behavior; A18 still governs what `validate()` covers. |
+| A28 | The loader always runs DB-wide `validate()`, but only target-scoped ERRORs (context is target manifest, or duplicate id for target) block load with `SCENE_MISSING`, `INVALID_SCENE`, or `INVALID_MANIFEST`. Other non-fatal issues are logged with `push_warning`. |
 | A29 | The game-level marker split (`PlayerSpawnPoint extends MapMarker`, `PlayerSpawnFilter extends MapMarkerFilter`, `player_index: int`) belongs in `game/` and lands with #15 via #50. The loader exposes no spawn API (A10, A12). |
 
 ## File layout
