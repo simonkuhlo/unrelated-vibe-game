@@ -46,10 +46,10 @@ tests/
   tools/              # tooling invoked by scripts/ (excluded from exports)
 ```
 
-Maploader suites: `MapDB` add/get/remove, validation state, copy/filter behavior;
+Maploader suites: `MapDB` add/get/remove, validation rules, copy/filter behavior;
 `MapManifest` field validation (including snake_case ids); `MapMarkerCollection`
 depth-first order and filtering; `MapScene` composition with the `Markers` root;
-`MapValidationIssue`/`MapValidator` helpers; and content resolution for every
+`MapValidationIssue` helpers; and content resolution for every
 built-in DB entry. `tests/content/test_map_db_content.gd` is the CI authority for
 built-in map content: it requires a `MapScene` root, a markers root, and a clean
 `MapScene.validate()` result for every map.

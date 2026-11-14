@@ -44,9 +44,6 @@ editor's resource graph as the authority:
   `code` (`StringName`), `message`, and `context`. `is_error()`,
   `format_string()`, and the shared static helpers `has_errors()`,
   `format_all()`, `log_all()`.
-- **`MapValidator`** (`RefCounted`, `@tool`): thin aggregator for cross-object
-  and null-safe checks. No god object; rules live on the owning component.
-
 ## Identity and validation
 
 - `manifest.id` is the sole identity. Runtime code treats ids as read-only by
@@ -60,9 +57,14 @@ editor's resource graph as the authority:
 - Components return `Array[MapValidationIssue]` from `validate()`. IDs are unique
   per DB and duplicate detection is part of validation, not a separate editor
   mechanism.
-- `MapDB.validate()` checks manifest fields, ID format, uniqueness, folder
-  location conventions, and scene content (by instantiating the scene to verify
-  it has a `MapScene` root and valid markers collection).
+- `MapDB.validate()` validates the whole DB, scenes included: it instantiates
+  every manifest's scene to verify a `MapScene` root and a valid markers
+  collection. The loader runs it on every load (A17).
+- `MapManifest.validate()` enforces the location contract: the manifest must live
+  in `res://game/maps/<id>/` and the scene must be in the same folder. Both
+  violations are ERRORs.
+- Issues aggregated from an instantiated scene point at the manifest, not the
+  scene nodes, because the instance is freed before `validate()` returns.
 - Validation triggers: `@export_tool_button("Validate")` on `MapDB`,
   `MapManifest`, `MapScene`, and `MapMarkerCollection`;
   `MapScene._get_configuration_warnings()`; the CI content test. No custom
@@ -107,7 +109,6 @@ system/maploader/
   map_marker_filter.gd      # MapMarkerFilter
   map_filter.gd             # MapFilter
   map_validation_issue.gd   # MapValidationIssue
-  map_validator.gd          # MapValidator (thin aggregator)
   # Phase 2, planned (gated on #40):
   map_load_error.gd         # MapLoadError
   map_load_result.gd        # MapLoadResult
@@ -123,7 +124,7 @@ system/maploader/
 ## Deferred items
 
 - Loader API, host contract, and unload semantics — [#40](https://github.com/simonkuhlo/unrelated-vibe-game/issues/40).
-- Phase 1 review leftovers (scene-validation ownership, game marker subclass, editor validation UX) — [#47](https://github.com/simonkuhlo/unrelated-vibe-game/issues/47).
+- Game-level marker subclass and spawn selection — [#40](https://github.com/simonkuhlo/unrelated-vibe-game/issues/40).
 - Async loader — [#36](https://github.com/simonkuhlo/unrelated-vibe-game/issues/36).
 - Downloadable packs — [#17](https://github.com/simonkuhlo/unrelated-vibe-game/issues/17).
 - Content hashing — [#16](https://github.com/simonkuhlo/unrelated-vibe-game/issues/16).

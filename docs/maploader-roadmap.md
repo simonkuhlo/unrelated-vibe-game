@@ -21,7 +21,7 @@ establish the v1 contracts.
 
 ### Phase 1 — Finalize Data Model (#18) — **CLOSED 2026-11-13**
 - [x] Rename `system/maploader_new/` to `system/maploader/` (drop `_new`).
-- [x] Implement `MapDB`, `MapManifest`, `MapScene`, `MapMarker`, `MapMarkerCollection`, `MapMarkerFilter`, `MapFilter`, `MapValidator`, `MapValidationIssue`.
+- [x] Implement `MapDB`, `MapManifest`, `MapScene`, `MapMarker`, `MapMarkerCollection`, `MapMarkerFilter`, `MapFilter`, `MapValidationIssue`. (`MapValidator` was later dropped, see A21.)
 - [x] Add unit tests for DB, manifest, marker collection, validation.
 - [x] Add content tests.
 - [x] Update `game/maps/test_box` to the final marker model.
@@ -32,7 +32,8 @@ and the `Markers` node name aligned with decision A8, validation feedback from t
 buttons, and validation/tests/docs cleanup. Phase 1 review follow-ups landed
 in #46: stronger content-test scene checks, marker-root validation, stricter ID
 handling, and documentation of the id/validation conventions. Design-level
-leftovers are tracked in #47.
+leftovers from the Phase 1 review were decided in #47 (see A17–A21); the
+game-level marker subclass moved to #40.
 
 ### Phase 2 — Synchronous Loader (#13) — **GATED ON #40**
 - Implement `MapLoader` and `LoadedMap` per #40.
@@ -71,10 +72,15 @@ leftovers are tracked in #47.
 | # | Decision |
 |---|---|
 | A17 | No validation cache. `MapDB` has no validation-state flag; the loader always calls `validate()` on load. |
+| A18 | `MapDB.validate()` validates the whole DB, including instantiating every map scene. The loader runs it on every load. |
+| A19 | Issues aggregated from an instantiated scene use the manifest as `context`; scene nodes are never returned as contexts. |
+| A20 | The manifest must live in `res://game/maps/<id>/` and the scene must share that folder. Both violations are ERRORs. |
+| A21 | `MapValidator` is dropped; components own validation and callers use `MapDB.validate()` / `MapManifest.validate()` directly. |
 
 ## Deferred items
 
 - Loader API, host contract, and unload semantics — #40.
+- Game-level marker subclass and spawn selection — #40.
 - Async loader — #36.
 - Downloadable packs — #17.
 - Content hashing — #16.

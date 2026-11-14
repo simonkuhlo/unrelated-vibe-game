@@ -17,6 +17,14 @@ func _make_valid_packed_scene() -> PackedScene:
 	return scene
 
 
+func _make_scene_without_markers() -> PackedScene:
+	var scene := PackedScene.new()
+	var map_scene := MapScene.new()
+	scene.pack(map_scene)
+	map_scene.free()
+	return scene
+
+
 func test_manifest_validation_rules(
 	id_str: String,
 	has_scene: bool,
@@ -109,5 +117,73 @@ func test_manifest_location_convention_validation() -> void:
 	for issue in issues:
 		if issue.code == &"manifest_folder_mismatch":
 			has_mismatch_error = true
+			assert_int(issue.severity).is_equal(MapValidationIssue.Severity.ERROR)
 			break
 	assert_bool(has_mismatch_error).is_true()
+
+
+func test_manifest_location_requires_game_maps_root() -> void:
+	var manifest := MapManifest.new()
+	manifest.id = &"test_map"
+	manifest.display_name = "Test Map"
+	manifest.thumbnail = PlaceholderTexture2D.new()
+	manifest.scene = _make_valid_packed_scene()
+	# Folder name matches the id, but the manifest is outside res://game/maps/.
+	manifest.resource_path = "res://other/test_map/map_manifest.tres"
+
+	var issues := manifest.validate()
+	var has_mismatch_error := false
+	for issue in issues:
+		if issue.code == &"manifest_folder_mismatch":
+			has_mismatch_error = true
+			break
+	assert_bool(has_mismatch_error).is_true()
+
+
+func test_manifest_valid_location_has_no_folder_issue() -> void:
+	var manifest := MapManifest.new()
+	manifest.id = &"test_map"
+	manifest.display_name = "Test Map"
+	manifest.thumbnail = PlaceholderTexture2D.new()
+	manifest.scene = _make_valid_packed_scene()
+	manifest.resource_path = "res://game/maps/test_map/map_manifest.tres"
+
+	var issues := manifest.validate()
+	var has_mismatch_error := false
+	for issue in issues:
+		if issue.code == &"manifest_folder_mismatch":
+			has_mismatch_error = true
+	assert_bool(has_mismatch_error).is_false()
+
+
+func test_manifest_scene_folder_mismatch_is_an_error() -> void:
+	var manifest := MapManifest.new()
+	manifest.id = &"test_map"
+	manifest.display_name = "Test Map"
+	manifest.thumbnail = PlaceholderTexture2D.new()
+	manifest.scene = _make_valid_packed_scene()
+	manifest.resource_path = "res://game/maps/test_map/map_manifest.tres"
+	manifest.scene.resource_path = "res://game/maps/other/map_scene.tscn"
+
+	var issues := manifest.validate()
+	var has_scene_mismatch := false
+	for issue in issues:
+		if issue.code == &"scene_folder_mismatch":
+			has_scene_mismatch = true
+			assert_int(issue.severity).is_equal(MapValidationIssue.Severity.ERROR)
+			break
+	assert_bool(has_scene_mismatch).is_true()
+
+
+func test_manifest_scene_issue_context_points_at_the_manifest() -> void:
+	var manifest := MapManifest.new()
+	manifest.id = &"test_map"
+	manifest.display_name = "Test Map"
+	manifest.thumbnail = PlaceholderTexture2D.new()
+	manifest.scene = _make_scene_without_markers()
+
+	var issues := manifest.validate()
+	assert_bool(MapValidationIssue.has_errors(issues)).is_true()
+	for issue in issues:
+		# Scene issues must not reference the instantiated scene, which is freed.
+		assert_object(issue.context).is_equal(manifest)

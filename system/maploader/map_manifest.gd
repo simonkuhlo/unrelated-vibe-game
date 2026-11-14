@@ -27,12 +27,12 @@ func validate() -> Array[MapValidationIssue]:
 	elif not _is_valid_id(id):
 		issues.append(MapValidationIssue.new(MapValidationIssue.Severity.ERROR, &"id_invalid", "Map ID must be lowercase snake_case (e.g. test_box).", self))
 	elif not resource_path.is_empty():
-		var folder_name := resource_path.get_base_dir().get_file()
-		if folder_name != str(id):
+		var expected_dir := "res://game/maps/%s" % id
+		if resource_path.get_base_dir() != expected_dir:
 			issues.append(MapValidationIssue.new(
 				MapValidationIssue.Severity.ERROR,
 				&"manifest_folder_mismatch",
-				"Manifest location folder '%s' does not match map ID '%s'." % [folder_name, id],
+				"Manifest must live in '%s' (found '%s')." % [expected_dir, resource_path.get_base_dir()],
 				self
 			))
 
@@ -42,7 +42,7 @@ func validate() -> Array[MapValidationIssue]:
 		if not resource_path.is_empty() and not scene.resource_path.is_empty():
 			if scene.resource_path.get_base_dir() != resource_path.get_base_dir():
 				issues.append(MapValidationIssue.new(
-					MapValidationIssue.Severity.WARNING,
+					MapValidationIssue.Severity.ERROR,
 					&"scene_folder_mismatch",
 					"Map scene '%s' is not in the same directory as manifest '%s'." % [scene.resource_path.get_file(), resource_path.get_file()],
 					self
@@ -66,7 +66,11 @@ func validate() -> Array[MapValidationIssue]:
 				))
 			else:
 				var map_scene := instance as MapScene
-				issues.append_array(map_scene.validate())
+				# The instance is freed below, so point every aggregated issue at
+				# the manifest instead of a scene node that will be dangling.
+				for issue in map_scene.validate():
+					issue.context = self
+					issues.append(issue)
 			instance.free()
 
 	if display_name.is_empty():
