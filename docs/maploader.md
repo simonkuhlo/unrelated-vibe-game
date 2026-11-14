@@ -23,7 +23,7 @@ editor's resource graph as the authority:
 - **`MapDB`** (`Resource`, `@tool`): `@export var maps: Array[MapManifest]`. Linear
   lookup, no runtime index/cache. `add_map()`, `remove_map()`, `get_map(id)`,
   `has_map(id)`, `get_maps(filter: MapFilter = null)`, `get_map_ids()`,
-  `validate()`, `is_valid()`, `is_validated`. `get_maps()` always returns an
+  `validate()`, `is_valid()`, `validation_ran`. `get_maps()` always returns an
   independent array copy that skips null rows.
 - **`MapManifest`** (`Resource`, `@tool`): v1 fields are `id`, `scene`,
   `display_name`, `thumbnail`. `version` is dropped; version metadata returns with
@@ -53,21 +53,20 @@ editor's resource graph as the authority:
   convention, like the array copies returned by `get_maps()`; the export is not
   enforced as immutable. Editing an id at editor time does not require re-adding
   the map.
-- `MapDB.is_validated` is **advisory state**: it records that `validate()` ran
+- `MapDB.validation_ran` is **advisory state**: it records that `validate()` ran
   after the last mutation of the DB (`add_map`, `remove_map`, `clear_db`, or a
   `maps` property assignment). It does not observe manifest field edits, and
   direct element mutation (`db.maps.append(...)`) bypasses it. Use the `MapDB`
   API for runtime changes.
-- A loader must call `validate()` before using a DB; `is_validated == true` alone
-  is not proof that the content is valid. `MapDB.is_valid()` runs validation and
-  reports whether there are ERROR issues.
+- A loader must call `validate()` before using a DB; `validation_ran == true`
+  alone is not proof that the content is valid. `MapDB.is_valid()` runs
+  validation and reports whether there are ERROR issues.
 - Components return `Array[MapValidationIssue]` from `validate()`. IDs are unique
   per DB and duplicate detection is part of validation, not a separate editor
   mechanism.
-- `MapDB.validate()` checks manifest fields, ID format, and uniqueness. It does
-  **not** instantiate or validate map scenes; scene structure is checked by
-  `MapScene.validate()` and the CI content test. Where loader-side scene
-  validation lives is a Phase 2 decision ([#40](https://github.com/simonkuhlo/unrelated-vibe-game/issues/40)).
+- `MapDB.validate()` checks manifest fields, ID format, uniqueness, folder
+  location conventions, and scene content (by instantiating the scene to verify
+  it has a `MapScene` root and valid markers collection).
 - Validation triggers: `@export_tool_button("Validate")` on `MapDB`,
   `MapManifest`, `MapScene`, and `MapMarkerCollection`;
   `MapScene._get_configuration_warnings()`; the CI content test. No custom

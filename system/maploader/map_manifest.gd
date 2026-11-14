@@ -26,9 +26,48 @@ func validate() -> Array[MapValidationIssue]:
 		issues.append(MapValidationIssue.new(MapValidationIssue.Severity.ERROR, &"id_missing", "Map ID is missing.", self))
 	elif not _is_valid_id(id):
 		issues.append(MapValidationIssue.new(MapValidationIssue.Severity.ERROR, &"id_invalid", "Map ID must be lowercase snake_case (e.g. test_box).", self))
+	elif not resource_path.is_empty():
+		var folder_name := resource_path.get_base_dir().get_file()
+		if folder_name != str(id):
+			issues.append(MapValidationIssue.new(
+				MapValidationIssue.Severity.ERROR,
+				&"manifest_folder_mismatch",
+				"Manifest location folder '%s' does not match map ID '%s'." % [folder_name, id],
+				self
+			))
 
 	if scene == null:
 		issues.append(MapValidationIssue.new(MapValidationIssue.Severity.ERROR, &"scene_missing", "Map scene is missing.", self))
+	else:
+		if not resource_path.is_empty() and not scene.resource_path.is_empty():
+			if scene.resource_path.get_base_dir() != resource_path.get_base_dir():
+				issues.append(MapValidationIssue.new(
+					MapValidationIssue.Severity.WARNING,
+					&"scene_folder_mismatch",
+					"Map scene '%s' is not in the same directory as manifest '%s'." % [scene.resource_path.get_file(), resource_path.get_file()],
+					self
+				))
+
+		var instance := scene.instantiate()
+		if instance == null:
+			issues.append(MapValidationIssue.new(
+				MapValidationIssue.Severity.ERROR,
+				&"scene_instantiate_failed",
+				"Map scene failed to instantiate.",
+				self
+			))
+		else:
+			if not (instance is MapScene):
+				issues.append(MapValidationIssue.new(
+					MapValidationIssue.Severity.ERROR,
+					&"scene_root_invalid",
+					"Map scene root must be a MapScene (found %s)." % instance.get_class(),
+					self
+				))
+			else:
+				var map_scene := instance as MapScene
+				issues.append_array(map_scene.validate())
+			instance.free()
 
 	if display_name.is_empty():
 		issues.append(MapValidationIssue.new(MapValidationIssue.Severity.ERROR, &"display_name_missing", "Map display name is missing.", self))

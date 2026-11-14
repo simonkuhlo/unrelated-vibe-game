@@ -1,6 +1,22 @@
 extends GdUnitTestSuite
 
 
+func _make_valid_packed_scene() -> PackedScene:
+	var scene := PackedScene.new()
+	var map_scene := MapScene.new()
+	var collection := MapMarkerCollection.new()
+	collection.name = "Markers"
+	map_scene.add_child(collection)
+	collection.owner = map_scene
+	var marker := MapMarker.new()
+	collection.add_child(marker)
+	marker.owner = map_scene
+	map_scene.markers = collection
+	scene.pack(map_scene)
+	map_scene.free()
+	return scene
+
+
 func test_manifest_validation_rules(
 	id_str: String,
 	has_scene: bool,
@@ -28,7 +44,7 @@ func test_manifest_validation_rules(
 	var manifest := MapManifest.new()
 	manifest.id = id_str
 	if has_scene:
-		manifest.scene = PackedScene.new()
+		manifest.scene = _make_valid_packed_scene()
 	manifest.display_name = display_name
 	if has_thumbnail:
 		manifest.thumbnail = PlaceholderTexture2D.new()
@@ -51,8 +67,47 @@ func test_manifest_with_only_warnings_is_valid() -> void:
 	var manifest := MapManifest.new()
 	manifest.id = &"test_map"
 	manifest.display_name = "Test Map"
-	manifest.scene = PackedScene.new()
+	manifest.scene = _make_valid_packed_scene()
 
 	var issues := manifest.validate()
 	assert_bool(MapValidationIssue.has_errors(issues)).is_false()
 	assert_bool(manifest.is_valid()).is_true()
+
+
+func test_manifest_validates_scene_root_type() -> void:
+	var manifest := MapManifest.new()
+	manifest.id = &"test_map"
+	manifest.display_name = "Test Map"
+	manifest.thumbnail = PlaceholderTexture2D.new()
+
+	var invalid_scene := PackedScene.new()
+	var dummy_root := Node3D.new()
+	invalid_scene.pack(dummy_root)
+	dummy_root.free()
+	manifest.scene = invalid_scene
+
+	var issues := manifest.validate()
+	assert_bool(MapValidationIssue.has_errors(issues)).is_true()
+	var has_invalid_root_error := false
+	for issue in issues:
+		if issue.code == &"scene_root_invalid":
+			has_invalid_root_error = true
+			break
+	assert_bool(has_invalid_root_error).is_true()
+
+
+func test_manifest_location_convention_validation() -> void:
+	var manifest := MapManifest.new()
+	manifest.id = &"test_map"
+	manifest.display_name = "Test Map"
+	manifest.thumbnail = PlaceholderTexture2D.new()
+	manifest.scene = _make_valid_packed_scene()
+	manifest.resource_path = "res://game/maps/wrong_folder/map_manifest.tres"
+
+	var issues := manifest.validate()
+	var has_mismatch_error := false
+	for issue in issues:
+		if issue.code == &"manifest_folder_mismatch":
+			has_mismatch_error = true
+			break
+	assert_bool(has_mismatch_error).is_true()

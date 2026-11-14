@@ -27,6 +27,7 @@ func validate() -> Array[MapValidationIssue]:
 			"Markers root must be a direct child of the map scene.",
 			markers
 		))
+		return issues
 	if markers.name != &"Markers":
 		issues.append(MapValidationIssue.new(
 			MapValidationIssue.Severity.WARNING,

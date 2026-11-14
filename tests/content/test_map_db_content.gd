@@ -26,6 +26,13 @@ func test_map_db_content_resolves() -> void:
 
 		assert_that(manifest.id).is_equal(id)
 		assert_that(manifest.display_name).is_not_empty()
+
+		var manifest_folder := manifest.resource_path.get_base_dir().get_file()
+		assert_that(manifest_folder).is_equal(str(id))
+
+		var scene_folder := manifest.scene.resource_path.get_base_dir()
+		assert_that(scene_folder).is_equal(manifest.resource_path.get_base_dir())
+
 		assert_that(manifest.scene).override_failure_message("Map scene for '%s' is null or missing" % id).is_not_null()
 
 		if manifest.scene == null:
