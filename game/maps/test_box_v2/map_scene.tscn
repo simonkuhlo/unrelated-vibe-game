@@ -1,0 +1,15 @@
+[gd_scene format=3 uid="uid://bunu4mufe12en"]
+
+[ext_resource type="Script" uid="uid://dvsqksno2dv83" path="res://system/maploader/map_scene.gd" id="1_ojotj"]
+[ext_resource type="Script" uid="uid://d2jfb53w4ts1u" path="res://system/maploader/map_marker_collection.gd" id="2_agpjt"]
+[ext_resource type="Script" uid="uid://bpkdkdxkcjf1r" path="res://game/player_spawn_point.gd" id="3_dwaqt"]
+
+[node name="MapScene" type="Node3D" unique_id=1754032060 node_paths=PackedStringArray("markers")]
+script = ExtResource("1_ojotj")
+markers = NodePath("Markers")
+
+[node name="Markers" type="Node3D" parent="." unique_id=1027897114]
+script = ExtResource("2_agpjt")
+
+[node name="PlayerSpawnPoint" type="Marker3D" parent="Markers" unique_id=81147491]
+script = ExtResource("3_dwaqt")

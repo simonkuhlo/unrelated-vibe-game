@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="MapManifest" format=3 uid="uid://w6ynnya5o2sn"]
+
+[ext_resource type="PackedScene" uid="uid://bunu4mufe12en" path="res://game/maps/test_box_v2/map_scene.tscn" id="1_sj8lt"]
+[ext_resource type="Script" uid="uid://d0vf25wf1m208" path="res://system/maploader/map_manifest.gd" id="2_akl18"]
+[ext_resource type="Texture2D" uid="uid://c5evllurw2edu" path="res://assets/icon.svg" id="3_xmkls"]
+
+[resource]
+script = ExtResource("2_akl18")
+id = &"test_box_v2"
+scene = ExtResource("1_sj8lt")
+display_name = "Test box 2"
+thumbnail = ExtResource("3_xmkls")
