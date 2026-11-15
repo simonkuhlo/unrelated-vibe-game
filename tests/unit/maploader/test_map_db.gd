@@ -73,6 +73,70 @@ func test_map_db_duplicate_validation() -> void:
 	assert_bool(duplicate_issues[0].message.contains("Box 2")).is_true()
 
 
+func test_map_db_duplicate_validation_reports_one_issue_for_all_duplicates() -> void:
+	var db := MapDB.new()
+	for title in ["Box 1", "Box 2", "Box 3"]:
+		db.add_map(_make_manifest(&"box", title))
+
+	var duplicate_issues: Array[MapValidationIssue] = []
+	for issue in db.validate():
+		if issue.code == &"duplicate_map_id":
+			duplicate_issues.append(issue)
+
+	assert_int(duplicate_issues.size()).is_equal(1)
+	assert_bool(duplicate_issues[0].message.contains("3 manifests")).is_true()
+	assert_bool(duplicate_issues[0].message.contains("Box 1")).is_true()
+	assert_bool(duplicate_issues[0].message.contains("Box 2")).is_true()
+	assert_bool(duplicate_issues[0].message.contains("Box 3")).is_true()
+
+
+func test_map_db_unique_ids_have_no_duplicate_issue() -> void:
+	var db := MapDB.new()
+	db.add_map(_make_manifest(&"alpha", "Alpha"))
+	db.add_map(_make_manifest(&"beta", "Beta"))
+
+	var has_duplicate_issue := false
+	for issue in db.validate():
+		if issue.code == &"duplicate_map_id":
+			has_duplicate_issue = true
+			break
+	assert_bool(has_duplicate_issue).is_false()
+
+
+func test_map_db_duplicate_descriptions_prefer_resource_paths() -> void:
+	var db := MapDB.new()
+	var first := _make_manifest(&"box", "Box 1")
+	first.resource_path = "res://game/maps/box/map_manifest.tres"
+	var second := _make_manifest(&"box", "Box 2")
+	second.resource_path = "res://game/maps/box/map_manifest_alt.tres"
+	db.add_map(first)
+	db.add_map(second)
+
+	var duplicate_issues: Array[MapValidationIssue] = []
+	for issue in db.validate():
+		if issue.code == &"duplicate_map_id":
+			duplicate_issues.append(issue)
+
+	assert_int(duplicate_issues.size()).is_equal(1)
+	assert_bool(duplicate_issues[0].message.contains(first.resource_path)).is_true()
+	assert_bool(duplicate_issues[0].message.contains(second.resource_path)).is_true()
+	assert_bool(duplicate_issues[0].message.contains("Box 1")).is_false()
+
+
+func test_map_db_duplicate_descriptions_fall_back_for_unnamed_manifests() -> void:
+	var db := MapDB.new()
+	db.add_map(_make_manifest(&"box", ""))
+	db.add_map(_make_manifest(&"box", ""))
+
+	var duplicate_issues: Array[MapValidationIssue] = []
+	for issue in db.validate():
+		if issue.code == &"duplicate_map_id":
+			duplicate_issues.append(issue)
+
+	assert_int(duplicate_issues.size()).is_equal(1)
+	assert_bool(duplicate_issues[0].message.contains("<unnamed map manifest>")).is_true()
+
+
 func test_map_db_validates_clean_content() -> void:
 	var db := MapDB.new()
 	db.add_map(_make_manifest(&"alpha"))

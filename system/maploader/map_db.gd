@@ -52,7 +52,7 @@ func _describe_manifest(manifest: MapManifest) -> String:
 		return manifest.resource_path
 	if not manifest.display_name.is_empty():
 		return "'%s'" % manifest.display_name
-	return manifest.get_class()
+	return "<unnamed map manifest>"
 
 
 func is_valid() -> bool:
