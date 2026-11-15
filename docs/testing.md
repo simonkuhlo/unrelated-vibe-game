@@ -54,7 +54,10 @@ built-in DB entry. The `MapLoader` integration suite covers success and every
 error code, check precedence, target-scoped validation (including unrelated
 broken/duplicate maps), synchronous signal counts, unload ownership, external
 free/detach/reparent/queue invalidation (including immediate reloads), and host
-SceneTree changes. `tests/content/test_map_db_content.gd`
+SceneTree changes. `tests/integration/maploader/test_main_bootstrap.gd` covers
+Main boot, loader ownership, browser listing, load/unload, and error surfacing;
+`tests/unit/maploader/test_player_spawn_filter.gd` covers the game-level spawn
+marker/filter. `tests/content/test_map_db_content.gd`
 is the CI authority for built-in map content: it requires a `MapScene` root, a
 markers root, and a clean `MapScene.validate()` result for every map.
 

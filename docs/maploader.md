@@ -1,7 +1,8 @@
 # Map Loader
 
 **Status:** Active — Phase 0 closed 2026-11-13; Phase 1 (data model) closed
-2026-11-13; Phase 2 (synchronous loader) closed 2026-11-15.
+2026-11-13; Phase 2 (synchronous loader) closed 2026-11-15; Phase 3 (Main
+bootstrap and map browser) closed 2026-11-15.
 
 The rework moves map data authoring into the Godot editor and treats the
 editor's resource graph as the authority:
@@ -192,6 +193,30 @@ target-scoped:
   `map_unloaded(map: LoadedMap)` exactly once.
 - Unloading with nothing loaded is a no-op and emits no signal.
 
+## Bootstrap and map browser
+
+`game/main.tscn` is the game entry scene. `game/main.gd` is the v1 bootstrap and
+the only owner of the DB and loader:
+
+- `map_db` is an exported reference to `game/maps/map_db.tres`.
+- `_ready()` creates a `MapLoader`, assigns `map_db` and `World/MapHost`, and
+  adds the loader as a child of `Main` (outside the host, A25).
+- `Main` exposes `get_map_db()`, `get_map_loader()`, `get_map_host()`,
+  `get_world()`, `get_ui()`, and `get_map_browser()`.
+- The `UI/MapBrowser` node is bound with `bind(db, loader)`. The browser reads
+  the DB for its list and only uses the loader's public API and signals.
+
+The browser lists `db.get_maps()` in DB order with display names and thumbnails,
+loads the selected map, unloads the active map, and shows `load_finished` /
+`map_unloaded` results. Failure text is `MapLoadResult.format_message()` plus any
+target validation issues from `MapValidationIssue.format_all()`. It has no
+autoloads and performs no scene transitions.
+
+`PlayerSpawnPoint` (`MapMarker`) and `PlayerSpawnFilter` (`MapMarkerFilter`) are
+game-level marker types in `game/`; they are queried through `MapScene.markers`
+(A29). The built-in `test_box` sample map contains one spawn point with
+`player_index = 0`.
+
 ## Decision log
 
 ### Loader decisions (2026-11-14, #40)
@@ -219,6 +244,12 @@ target-scoped:
 |---|---|
 | A31 | `LoadedMap.is_valid()` is host-scoped: the handle is valid only while its root is alive, not queued for deletion, and parented to the loader's `map_host`. External detach or reparent invalidates the handle permanently (external code owns the root), and a queued root is detached from the host during state sync so an immediate next `load_map()` proceeds. A host that leaves the SceneTree does not unload the map. |
 
+### Bootstrap decision (2026-11-15, #15)
+
+| # | Decision |
+|---|---|
+| A32 | `Main` (`game/main.gd`) is the sole owner of the built-in `MapDB` and `MapLoader`. It creates the loader at runtime outside `World/MapHost`, exposes `World/MapHost` and `UI`, and binds the browser via `bind(db, loader)`. UI only reads the DB, calls loader endpoints, and listens to loader signals; there are no autoloads or scene transitions. |
+
 ## File layout
 
 ```text
@@ -235,16 +266,27 @@ system/maploader/
   map_load_result.gd        # MapLoadResult
   loaded_map.gd             # LoadedMap
   map_loader.gd             # MapLoader
+game/
+  main.gd                   # bootstrap: owns MapDB + MapLoader
+  main.tscn
+  player_spawn_point.gd     # PlayerSpawnPoint
+  player_spawn_filter.gd    # PlayerSpawnFilter
+  maps/<map_id>/            # map_manifest.tres, map_scene.tscn, thumbnail
+  maps/map_db.tres          # built-in MapDB
+ui/
+  map_browser/
+    map_browser.gd          # MapBrowser
+    map_browser.tscn
 ```
 
-- `game/maps/<map_id>/`: `map_manifest.tres`, `map_scene.tscn`, thumbnail, and
-  map-owned assets.
+- `game/maps/<map_id>/` holds the manifest, scene, thumbnail, and map-owned
+  assets.
 - IDs are lowercase `snake_case`; the folder name matches the id.
 - Directory name is `maploader` (matches docs and issue labels).
 
 ## Deferred items
 
-- Game-level marker subclass — [#15](https://github.com/simonkuhlo/unrelated-vibe-game/issues/15). Spawn selection itself is out of scope (A10).
+- Spawn selection and player assignment policy — out of scope for the loader (A10/A29).
 - Map config/setup (`apply_setup()`) — [#10](https://github.com/simonkuhlo/unrelated-vibe-game/issues/10).
 - Async loader — [#36](https://github.com/simonkuhlo/unrelated-vibe-game/issues/36).
 - Downloadable packs — [#17](https://github.com/simonkuhlo/unrelated-vibe-game/issues/17).

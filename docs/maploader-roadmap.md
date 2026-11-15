@@ -1,7 +1,8 @@
 # Maploader Roadmap
 
 **Status:** Active — Phase 0 closed 2026-11-13; Phase 1 closed 2026-11-13;
-Phase 2 closed 2026-11-15 (#52, review follow-ups in #53).
+Phase 2 closed 2026-11-15 (#52, review follow-ups in #53); Phase 3 closed
+2026-11-15 (#15, with #50).
 
 ## Summary
 
@@ -47,9 +48,16 @@ Phase 2 landed in #52. The Phase 2 review follow-ups landed in #53: host-scoped
 handle invalidation on external detach/reparent, and regression coverage for
 queue/reparent/host tree changes (A31). Phase 3 is unblocked.
 
-### Phase 3 — Main & Bootstrap (#15)
-- Wire `Main` -> `World/MapHost`.
-- Minimal map browser.
+### Phase 3 — Main & Bootstrap (#15) — **CLOSED 2026-11-15**
+- [x] Wire `Main` -> `World/MapHost`.
+- [x] Minimal map browser.
+
+Phase 3 landed in #15 with #50. `game/main.gd` owns the built-in DB and the
+`MapLoader`, exposes `World/MapHost` and `UI`, and binds the map browser.
+`ui/map_browser/` lists DB maps with thumbnails, loads and unloads through the
+loader, and surfaces load results. `PlayerSpawnPoint`/`PlayerSpawnFilter` now
+live in `game/`, and the sample map uses one spawn point. A32 records the
+ownership and wiring decision.
 
 ### Phase 4 — V1 Closeout
 - Finalize `docs/maploader.md` and related documentation.
@@ -110,11 +118,16 @@ queue/reparent/host tree changes (A31). Phase 3 is unblocked.
 |---|---|
 | A31 | `LoadedMap.is_valid()` is host-scoped: valid only while the root is alive, not queued for deletion, and parented to the loader's `map_host`. External detach/reparent invalidates the handle permanently; a queued root is detached from the host during state sync so an immediate next `load_map()` proceeds; a host leaving the SceneTree does not unload the map. |
 
+### Bootstrap decision (2026-11-15, #15)
+
+| # | Decision |
+|---|---|
+| A32 | `Main` (`game/main.gd`) is the sole owner of the built-in `MapDB` and `MapLoader`. It creates the loader at runtime outside `World/MapHost`, exposes `World/MapHost` and `UI`, and binds the browser via `bind(db, loader)`. UI only reads the DB, calls loader endpoints, and listens to loader signals; there are no autoloads or scene transitions. |
+
 Full contract: [maploader.md](maploader.md#loader).
 
 ## Deferred items
 
-- Game-level marker subclass — #50, landing with #15 (spawn selection out of scope, A10/A29).
 - Async loader — #36.
 - Downloadable packs — #17.
 - Content hashing — #16.
