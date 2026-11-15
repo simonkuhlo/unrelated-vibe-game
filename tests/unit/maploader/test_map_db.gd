@@ -53,18 +53,24 @@ func test_map_db_operations() -> void:
 
 func test_map_db_duplicate_validation() -> void:
 	var db := MapDB.new()
-	db.add_map(_make_manifest(&"box", "Box 1"))
-	db.add_map(_make_manifest(&"box", "Box 2"))
+	var m1 := _make_manifest(&"box", "Box 1")
+	var m2 := _make_manifest(&"box", "Box 2")
+	db.add_map(m1)
+	db.add_map(m2)
 
 	var issues := db.validate()
 	assert_bool(db.is_valid()).is_false()
 
-	var has_duplicate_error := false
+	var duplicate_issues: Array[MapValidationIssue] = []
 	for issue in issues:
 		if issue.code == &"duplicate_map_id":
-			has_duplicate_error = true
-			break
-	assert_bool(has_duplicate_error).is_true()
+			duplicate_issues.append(issue)
+
+	assert_int(duplicate_issues.size()).is_equal(1)
+	assert_object(duplicate_issues[0].context).is_equal(db)
+	assert_bool(duplicate_issues[0].message.contains("box")).is_true()
+	assert_bool(duplicate_issues[0].message.contains("Box 1")).is_true()
+	assert_bool(duplicate_issues[0].message.contains("Box 2")).is_true()
 
 
 func test_map_db_validates_clean_content() -> void:

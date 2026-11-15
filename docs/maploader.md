@@ -43,6 +43,7 @@ editor's resource graph as the authority:
   `code` (`StringName`), `message`, and `context`. `is_error()`,
   `format_string()`, and the shared static helpers `has_errors()`,
   `format_all()`, `log_all()`.
+
 ## Identity and validation
 
 - `manifest.id` is the sole identity. Runtime code treats ids as read-only by
@@ -55,13 +56,17 @@ editor's resource graph as the authority:
   there are ERROR issues.
 - Components return `Array[MapValidationIssue]` from `validate()`. IDs are unique
   per DB and duplicate detection is part of validation, not a separate editor
-  mechanism.
+  mechanism. For duplicate IDs, `MapDB.validate()` emits a single `duplicate_map_id`
+  ERROR issue per duplicated ID with `context` set to `MapDB`, mentioning all
+  manifests included in the duplicate.
 - `MapDB.validate()` validates the whole DB, scenes included: it instantiates
   every manifest's scene to verify a `MapScene` root and a valid markers
   collection. The loader runs it on every load (A17).
 - `MapManifest.validate()` enforces the location contract: the manifest must live
   in `res://game/maps/<id>/` and the scene must be in the same folder. Both
-  violations are ERRORs.
+  violations are ERRORs. Folder location checks apply when `resource_path` is set;
+  in-memory resources with an empty `resource_path` skip path location checks (used
+  in test fixtures).
 - Issues aggregated from an instantiated scene point at the manifest, not the
   scene nodes, because the instance is freed before `validate()` returns.
 - Validation triggers: `@export_tool_button("Validate")` on `MapDB`,
@@ -98,7 +103,9 @@ validation state, so it calls `MapDB.validate()` on every load (A17).
 - `load_map(id: StringName) -> MapLoadResult`.
 - Emits exactly one terminal `load_finished(result: MapLoadResult)` signal,
   synchronously, before returning. There are no separate success/failure
-  signals.
+  signals. Every `load_map()` call produces a `MapLoadResult` and emits
+  `load_finished(result)` synchronously before returning, on both success and
+  failure.
 - The result is the API contract; the signal lets UI react without polling.
 - Loading never aborts the caller. Every failure is a result with a non-`NONE`
   code, and the host is left in its prior state: empty for a first load,
@@ -113,20 +120,22 @@ validation state, so it calls `MapDB.validate()` on every load (A17).
 `SCENE_MISSING`, `INVALID_SCENE`.
 
 `MapLoadResult` (`RefCounted`) exposes `code`, `manifest`, `map`, `issues`
-(`Array[MapValidationIssue]`), `is_ok()`, and `format_message()`. `issues` carries
-the target-scoped issues when loading fails due to validation.
+(`Array[MapValidationIssue]`), `is_ok()`, and `format_message()`. Field population rules:
+- `manifest`: populated once the requested ID resolves to a manifest (non-null for `HOST_INVALID`, `HOST_OCCUPIED`, `ALREADY_LOADED`, `INVALID_MANIFEST`, `SCENE_MISSING`, `INVALID_SCENE`, `NONE`; `null` for `DB_INVALID` and `NOT_FOUND`).
+- `map`: populated only on `NONE` (success); `null` on all error codes.
+- `issues`: carries target-scoped validation ERROR issues when loading fails due to validation (`INVALID_MANIFEST`, `SCENE_MISSING`, `INVALID_SCENE`); empty for non-validation error codes.
 
 #### Deterministic execution order
 
-Every `load_map(id)` call executes checks in the following strict order:
+Every `load_map(id)` call executes checks in the following strict order, constructing the result, emitting `load_finished(result)` synchronously, and returning `result` for every path:
 
 1. `DB_INVALID`: `map_db` is `null`.
 2. `NOT_FOUND`: `id` is empty or `map_db.get_map(id)` returns `null`.
-3. `HOST_INVALID`: `map_host` is `null`, not in tree (`is_inside_tree() == false`), or loader is a descendant of `map_host`.
+3. `HOST_INVALID`: `map_host` is `null`, invalid/queued for deletion (`is_instance_valid(map_host) == false` or `map_host.is_queued_for_deletion()`), not in tree (`is_inside_tree() == false`), or loader is a descendant of `map_host`.
 4. `ALREADY_LOADED`: A map is currently loaded (`is_loaded() == true`).
 5. `HOST_OCCUPIED`: `map_host.get_child_count() > 0`.
 6. **Validation & Classification**: Run `map_db.validate()`. If target-scoped ERRORs exist:
-   - Target-scoped issues are issues where `context` is the target `MapManifest`, or `duplicate_map_id` issues for the target `id`.
+   - Target-scoped issues are ERROR issues where `context` is the target `MapManifest`, or `duplicate_map_id` ERROR issues where the issue refers to the target `id` (e.g. `map_db.get_map_ids().count(id) > 1`).
    - If target issues contain `scene_missing` (or `manifest.scene == null`) → return `SCENE_MISSING`.
    - Else if target issues contain `scene_instantiate_failed` or `scene_root_invalid` → return `INVALID_SCENE`.
    - Else → return `INVALID_MANIFEST`.
@@ -145,8 +154,7 @@ target-scoped:
 
 ### Host contract
 
-- `map_host` must be in the tree and empty (`get_child_count() == 0`); the host
-  is reserved for loader content.
+- `map_host` must be valid (`is_instance_valid(map_host)` and `not map_host.is_queued_for_deletion()`), in the tree (`is_inside_tree() == true`), and empty (`get_child_count() == 0`); the host is reserved for loader content.
 - The loader must not be a descendant of the host.
 - The loader adds the map root as a direct child of the host and resets the
   root's transform to identity. The host transform owns placement; maps do not
@@ -159,8 +167,7 @@ target-scoped:
   active map is untouched. v1 does not auto-unload or replace; callers unload
   first.
 - A failed load never disturbs the active map.
-- If external code frees or detaches the root, the loader treats the map as no
-  longer loaded: `is_loaded()` returns false and the next `load_map()` proceeds.
+- If external code frees, detaches, or queues for deletion (`is_queued_for_deletion()`) the map root, the loader treats the map as no longer loaded: `is_loaded()` returns false and the next `load_map()` proceeds. If external code detaches the root without freeing it, external code assumes ownership of that node; the loader clears its internal handle reference and will not free the detached node during subsequent `unload()` or `load_map()` calls.
 
 ### `LoadedMap`
 
