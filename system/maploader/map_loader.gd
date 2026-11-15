@@ -32,11 +32,11 @@ func unload() -> void:
 	_active_map = null
 
 	var root := map.get_root()
-	if is_instance_valid(root) and root.get_parent() == map_host:
+	if root != null and is_instance_valid(map_host) and root.get_parent() == map_host:
 		map_host.remove_child(root)
 		root.queue_free()
-	# A root reparented outside the host is owned by external code: leave it
-	# alive and only drop the loader's reference.
+	# A root detached or reparented outside the host is owned by external code:
+	# leave it alive and only drop the loader's reference.
 
 	map.invalidate()
 	map_unloaded.emit(map)
@@ -52,11 +52,24 @@ func get_loaded_map() -> LoadedMap:
 	return _active_map
 
 
-## Drops a handle whose root was externally freed, detached, or queued for
-## deletion. No signal is emitted because this is not a loader-initiated unload.
+## Drops a handle whose root was externally freed, detached, reparented, or
+## queued for deletion. A queued root is still a host child until the deferred
+## deletion runs, so detach it immediately to keep the host free for an
+## immediate next load. No signal is emitted because this is not a
+## loader-initiated unload.
 func _prune_invalid_handle() -> void:
-	if _active_map != null and not _active_map.is_valid():
-		_active_map = null
+	if _active_map == null or _active_map.is_valid():
+		return
+
+	var map := _active_map
+	_active_map = null
+
+	var root := map._peek_root()
+	if root != null and root.is_queued_for_deletion() \
+			and is_instance_valid(map_host) and root.get_parent() == map_host:
+		map_host.remove_child(root)
+
+	map.invalidate()
 
 
 func _execute_load(id: StringName) -> MapLoadResult:
@@ -142,5 +155,5 @@ func _execute_load(id: StringName) -> MapLoadResult:
 	map_host.add_child(root)
 	root.transform = Transform3D.IDENTITY
 
-	_active_map = LoadedMap.new(id, manifest, root)
+	_active_map = LoadedMap.new(id, manifest, root, map_host)
 	return MapLoadResult.new(MapLoadError.Code.NONE, manifest, _active_map)

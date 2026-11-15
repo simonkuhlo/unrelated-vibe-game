@@ -20,7 +20,8 @@ enum Code {
 	HOST_OCCUPIED,
 	## A map is already active in the loader.
 	ALREADY_LOADED,
-	## Validation failed for the target manifest (excluding scene/duplicate issues).
+	## Validation failed for the target manifest. Target-scoped duplicate ids
+	## are classified here as well.
 	INVALID_MANIFEST,
 	## Target manifest is missing a scene or the scene is null.
 	SCENE_MISSING,
