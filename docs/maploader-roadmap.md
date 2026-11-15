@@ -97,7 +97,7 @@ reporting to one `duplicate_map_id` ERROR per duplicated ID with `MapDB` context
 
 | # | Decision |
 |---|---|
-| A30 | `MapDB.validate()` reports one `duplicate_map_id` ERROR per duplicated ID with `context` set to `MapDB` and every involved manifest listed in the message. The loader detects a target duplicate with `map_db.get_map_ids().count(id) > 1`, not by inspecting issue `context`. |
+| A30 | `MapDB.validate()` reports one `duplicate_map_id` ERROR per duplicated ID with `context` set to `MapDB`, `map_id` set to the duplicated ID, and every involved manifest listed in the message. The loader detects a target duplicate with the structured `map_id` (and `map_db.get_map_ids().count(id) > 1`), not by inspecting issue `context` or the message. |
 
 Full contract: [maploader.md](maploader.md#loader).
 

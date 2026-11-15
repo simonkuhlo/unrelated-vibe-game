@@ -68,6 +68,7 @@ func test_map_db_duplicate_validation() -> void:
 
 	assert_int(duplicate_issues.size()).is_equal(1)
 	assert_object(duplicate_issues[0].context).is_equal(db)
+	assert_that(duplicate_issues[0].map_id).is_equal(&"box")
 	assert_bool(duplicate_issues[0].message.contains("box")).is_true()
 	assert_bool(duplicate_issues[0].message.contains("Box 1")).is_true()
 	assert_bool(duplicate_issues[0].message.contains("Box 2")).is_true()
