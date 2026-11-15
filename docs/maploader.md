@@ -123,7 +123,7 @@ validation state, so it calls `MapDB.validate()` on every load (A17).
 (`Array[MapValidationIssue]`), `is_ok()`, and `format_message()`. Field population rules:
 - `manifest`: populated once the requested ID resolves to a manifest (non-null for `HOST_INVALID`, `HOST_OCCUPIED`, `ALREADY_LOADED`, `INVALID_MANIFEST`, `SCENE_MISSING`, `INVALID_SCENE`, `NONE`; `null` for `DB_INVALID` and `NOT_FOUND`).
 - `map`: populated only on `NONE` (success); `null` on all error codes.
-- `issues`: carries target-scoped validation ERROR issues when loading fails due to validation (`INVALID_MANIFEST`, `SCENE_MISSING`, `INVALID_SCENE`); empty for non-validation error codes.
+- `issues`: carries target-scoped validation ERROR issues when loading fails due to validation (`INVALID_MANIFEST`, `SCENE_MISSING`, `INVALID_SCENE`); empty for non-validation error codes. A target duplicate ID includes the `duplicate_map_id` issue even though its `context` is `MapDB`.
 
 #### Deterministic execution order
 
@@ -135,7 +135,8 @@ Every `load_map(id)` call executes checks in the following strict order, constru
 4. `ALREADY_LOADED`: A map is currently loaded (`is_loaded() == true`).
 5. `HOST_OCCUPIED`: `map_host.get_child_count() > 0`.
 6. **Validation & Classification**: Run `map_db.validate()`. If target-scoped ERRORs exist:
-   - Target-scoped issues are ERROR issues where `context` is the target `MapManifest`, or `duplicate_map_id` ERROR issues where the issue refers to the target `id` (e.g. `map_db.get_map_ids().count(id) > 1`).
+   - Target-scoped issues are ERROR issues where `context` is the target `MapManifest`.
+   - Duplicate IDs are target-scoped when `map_db.get_map_ids().count(id) > 1`. This is the normative check; the duplicate issue's `context` is `MapDB`, so target detection must not test it via `context`.
    - If target issues contain `scene_missing` (or `manifest.scene == null`) → return `SCENE_MISSING`.
    - Else if target issues contain `scene_instantiate_failed` or `scene_root_invalid` → return `INVALID_SCENE`.
    - Else → return `INVALID_MANIFEST`.
@@ -148,7 +149,7 @@ target-scoped:
 
 - Fatal: ERROR issues whose `context` is the requested manifest, plus
   duplicate-id ERRORs for the requested id.
-- Non-fatal: every other issue (issues belonging to other maps in the DB or null manifest slots).
+- Non-fatal: every other issue (issues belonging to other maps in the DB, null manifest slots, and all WARNINGs, including the target's).
   The loader logs non-fatal issues using `push_warning()` so that broken non-target maps emit diagnostic warnings without triggering engine/gdUnit error aborts (`push_error`). One broken map cannot block every map in the DB.
 - WARNINGs never block.
 
@@ -199,8 +200,14 @@ target-scoped:
 | A25 | `map_host: Node3D` must be in-tree and empty; the loader must not be a descendant of the host. The loader adds the map root under the host and resets it to identity; the host owns placement. |
 | A26 | `LoadedMap` is a thin `RefCounted` handle (`id`, `manifest`, `root`, `is_valid()`), not a marker facade, invalidated immediately on unload. `id` and `manifest` remain readable post-unload. |
 | A27 | `unload()` is idempotent: detach, invalidate, `queue_free()`, clear state, emit `map_unloaded` once for real unloads only. Externally freed/detached roots count as no longer loaded. |
-| A28 | The loader always runs DB-wide `validate()`, but only target-scoped ERRORs (context is target manifest, or duplicate id for target) block load with `SCENE_MISSING`, `INVALID_SCENE`, or `INVALID_MANIFEST`. Other non-fatal issues are logged with `push_warning`. |
+| A28 | The loader always runs DB-wide `validate()`, but only target-scoped ERRORs (context is target manifest, or `get_map_ids().count(id) > 1` for duplicates, A30) block load with `SCENE_MISSING`, `INVALID_SCENE`, or `INVALID_MANIFEST`. Other non-fatal issues are logged with `push_warning`. |
 | A29 | The game-level marker split (`PlayerSpawnPoint extends MapMarker`, `PlayerSpawnFilter extends MapMarkerFilter`, `player_index: int`) belongs in `game/` and lands with #15 via #50. The loader exposes no spawn API (A10, A12). |
+
+### Validation decision (2026-11-15, #40 follow-up)
+
+| # | Decision |
+|---|---|
+| A30 | `MapDB.validate()` reports one `duplicate_map_id` ERROR per duplicated ID with `context` set to `MapDB` and every involved manifest listed in the message. The loader detects a target duplicate with `map_db.get_map_ids().count(id) > 1`, not by inspecting issue `context`. |
 
 ## File layout
 

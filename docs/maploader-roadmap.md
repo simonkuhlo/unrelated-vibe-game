@@ -1,7 +1,7 @@
 # Maploader Roadmap
 
 **Status:** Active — Phase 0 closed 2026-11-13; Phase 1 closed 2026-11-13; #40
-closed 2026-11-14, unblocking Phase 2.
+finalized its decisions 2026-11-14 (closed by #51), unblocking Phase 2.
 
 ## Summary
 
@@ -33,7 +33,9 @@ buttons, and validation/tests/docs cleanup. Phase 1 review follow-ups landed
 in #46: stronger content-test scene checks, marker-root validation, stricter ID
 handling, and documentation of the id/validation conventions. Design-level
 leftovers from the Phase 1 review were decided in #47 (see A17–A21); the
-game-level marker subclass moved to #40.
+game-level marker subclass moved to #40. The #40 session also changed duplicate
+reporting to one `duplicate_map_id` ERROR per duplicated ID with `MapDB` context
+(A30).
 
 ### Phase 2 — Synchronous Loader (#13) — **READY (UNBLOCKED 2026-11-14)**
 - [ ] Implement `MapLoader`, `LoadedMap`, `MapLoadResult`, and `MapLoadError` per #40.
@@ -83,7 +85,7 @@ game-level marker subclass moved to #40.
 | # | Decision |
 |---|---|
 | A22 | `load_map(id) -> MapLoadResult` emits one terminal `load_finished(result)` signal synchronously before returning. |
-| A23 | Standalone `MapLoadError` enum with specific codes (`SCENE_MISSING`, `INVALID_SCENE`, `INVALID_MANIFEST`, etc.) and strict check precedence. `MapLoadResult` carries code, manifest, handle, and issues. |
+| A23 | Standalone `MapLoadError` enum with specific codes (`SCENE_MISSING`, `INVALID_SCENE`, `INVALID_MANIFEST`, etc.) and strict check precedence. `MapLoadResult` carries code, manifest, map, and issues. |
 | A24 | Single-flight: reject with `ALREADY_LOADED`; failed loads leave the active map untouched. |
 | A25 | Host must be in-tree, empty, and not an ancestor of the loader; host owns placement. |
 | A26 | `LoadedMap` is a thin handle, invalidated immediately on unload (`id`/`manifest` remain readable post-unload). |
@@ -91,11 +93,17 @@ game-level marker subclass moved to #40.
 | A28 | Loader runs DB-wide validation; only target-scoped ERRORs block a load, classified into `SCENE_MISSING`, `INVALID_SCENE`, or `INVALID_MANIFEST`. Non-fatal issues log with `push_warning`. |
 | A29 | `PlayerSpawnPoint`/`PlayerSpawnFilter` live in `game/` and land with #15 via #50; no spawn API on the loader. |
 
+### Validation decision (2026-11-15, #40 follow-up)
+
+| # | Decision |
+|---|---|
+| A30 | `MapDB.validate()` reports one `duplicate_map_id` ERROR per duplicated ID with `context` set to `MapDB` and every involved manifest listed in the message. The loader detects a target duplicate with `map_db.get_map_ids().count(id) > 1`, not by inspecting issue `context`. |
+
 Full contract: [maploader.md](maploader.md#loader).
 
 ## Deferred items
 
-- Game-level marker subclass — #15 (spawn selection out of scope, A10/A29).
+- Game-level marker subclass — #50, landing with #15 (spawn selection out of scope, A10/A29).
 - Async loader — #36.
 - Downloadable packs — #17.
 - Content hashing — #16.
