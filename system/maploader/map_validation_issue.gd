@@ -14,13 +14,18 @@ var severity: Severity
 var code: StringName
 var message: String
 var context: Object
+## Optional map ID the issue is scoped to when `context` cannot carry it.
+## `MapDB` sets this on `duplicate_map_id` issues, whose context is the DB
+## rather than a single manifest.
+var map_id: StringName
 
 
-func _init(p_severity: Severity, p_code: StringName, p_message: String, p_context: Object = null) -> void:
+func _init(p_severity: Severity, p_code: StringName, p_message: String, p_context: Object = null, p_map_id: StringName = &"") -> void:
 	severity = p_severity
 	code = p_code
 	message = p_message
 	context = p_context
+	map_id = p_map_id
 
 
 func is_error() -> bool:
@@ -60,6 +65,17 @@ static func log_all(context: Object, issues: Array[MapValidationIssue]) -> void:
 			push_error(line)
 		else:
 			push_warning(line)
+
+
+## Reports all issues as warnings, even if their severity is ERROR.
+## Used by the loader to report diagnostic issues from non-target maps
+## without triggering engine error aborts or CI failures with `push_error`.
+static func log_warnings(context: Object, issues: Array[MapValidationIssue]) -> void:
+	if issues.is_empty():
+		return
+	var source := _describe_context(context)
+	for issue in issues:
+		push_warning("[maploader] %s: %s" % [source, issue.format_string()])
 
 
 static func _describe_context(context: Object) -> String:

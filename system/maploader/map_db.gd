@@ -42,7 +42,7 @@ func validate() -> Array[MapValidationIssue]:
 			for m: MapManifest in duplicates:
 				manifest_descriptions.append(_describe_manifest(m))
 			var msg := "Duplicate map ID '%s' found in %d manifests (%s)." % [id, duplicates.size(), ", ".join(manifest_descriptions)]
-			issues.append(MapValidationIssue.new(MapValidationIssue.Severity.ERROR, &"duplicate_map_id", msg, self))
+			issues.append(MapValidationIssue.new(MapValidationIssue.Severity.ERROR, &"duplicate_map_id", msg, self, id))
 
 	return issues
 

@@ -9,6 +9,8 @@ extends RefCounted
 
 var id: StringName
 var manifest: MapManifest
+var root: MapScene:
+	get: return get_root()
 
 var _root: MapScene
 var _is_valid: bool = true
@@ -27,7 +29,7 @@ func get_root() -> MapScene:
 
 
 func is_valid() -> bool:
-	return _is_valid and is_instance_valid(_root) and _root.is_inside_tree()
+	return _is_valid and is_instance_valid(_root) and not _root.is_queued_for_deletion() and _root.is_inside_tree()
 
 
 func invalidate() -> void:

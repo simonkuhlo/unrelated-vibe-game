@@ -26,6 +26,12 @@ func test_has_errors_ignores_warnings() -> void:
 	assert_bool(MapValidationIssue.has_errors(issues)).is_true()
 
 
+func test_issue_map_id_defaults_to_empty() -> void:
+	var issue := MapValidationIssue.new(MapValidationIssue.Severity.ERROR, &"id_missing", "Map ID is missing.")
+
+	assert_that(issue.map_id).is_equal(&"")
+
+
 func test_format_all_preserves_order() -> void:
 	var issues: Array[MapValidationIssue] = [
 		MapValidationIssue.new(MapValidationIssue.Severity.ERROR, &"first", "First."),

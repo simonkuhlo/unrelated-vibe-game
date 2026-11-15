@@ -17,24 +17,26 @@ var _active_map: LoadedMap
 
 
 func load_map(id: StringName) -> MapLoadResult:
+	_prune_invalid_handle()
 	var result := _execute_load(id)
 	load_finished.emit(result)
 	return result
 
 
 func unload() -> void:
-	if not is_loaded():
-		_active_map = null
+	_prune_invalid_handle()
+	if _active_map == null:
 		return
 
 	var map := _active_map
 	_active_map = null
 
 	var root := map.get_root()
-	if is_instance_valid(root):
-		if root.get_parent() == map_host:
-			map_host.remove_child(root)
+	if is_instance_valid(root) and root.get_parent() == map_host:
+		map_host.remove_child(root)
 		root.queue_free()
+	# A root reparented outside the host is owned by external code: leave it
+	# alive and only drop the loader's reference.
 
 	map.invalidate()
 	map_unloaded.emit(map)
@@ -48,6 +50,13 @@ func get_loaded_map() -> LoadedMap:
 	if not is_loaded():
 		return null
 	return _active_map
+
+
+## Drops a handle whose root was externally freed, detached, or queued for
+## deletion. No signal is emitted because this is not a loader-initiated unload.
+func _prune_invalid_handle() -> void:
+	if _active_map != null and not _active_map.is_valid():
+		_active_map = null
 
 
 func _execute_load(id: StringName) -> MapLoadResult:
@@ -85,9 +94,9 @@ func _execute_load(id: StringName) -> MapLoadResult:
 		var is_target := false
 		if issue.context == manifest:
 			is_target = true
-		elif issue.code == &"duplicate_map_id" and is_target_duplicate:
-			# A30: duplicate_map_id issues have MapDB context, but we consider
-			# them target-scoped if the target ID is actually duplicated.
+		elif is_target_duplicate and issue.code == &"duplicate_map_id" and issue.map_id == id:
+			# A30: duplicate_map_id issues have MapDB context and carry the
+			# duplicated ID in `map_id`, so unrelated duplicates stay non-fatal.
 			is_target = true
 
 		if is_target and issue.is_error():
@@ -96,7 +105,7 @@ func _execute_load(id: StringName) -> MapLoadResult:
 			non_fatal_issues.append(issue)
 
 	if not non_fatal_issues.is_empty():
-		MapValidationIssue.log_all(self, non_fatal_issues)
+		MapValidationIssue.log_warnings(self, non_fatal_issues)
 
 	if not target_issues.is_empty():
 		var code := MapLoadError.Code.INVALID_MANIFEST
@@ -123,12 +132,13 @@ func _execute_load(id: StringName) -> MapLoadResult:
 		return MapLoadResult.new(code, manifest, null, target_issues)
 
 	# 7. NONE (Success)
-	var root := manifest.scene.instantiate() as MapScene
-	# Pre-condition: manifest.validate() already checked it's a MapScene.
-	# If instantiate fails here (rare if validate passed), it's a hard error.
-	if root == null:
+	var instance := manifest.scene.instantiate()
+	if not (instance is MapScene):
+		if is_instance_valid(instance):
+			instance.free()
 		return MapLoadResult.new(MapLoadError.Code.INVALID_SCENE, manifest)
 
+	var root := instance as MapScene
 	map_host.add_child(root)
 	root.transform = Transform3D.IDENTITY
 
