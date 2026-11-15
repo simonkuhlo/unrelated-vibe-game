@@ -1,3 +1,17 @@
 [gd_scene format=3 uid="uid://tt1bmibibnsq"]
 
+[ext_resource type="Script" uid="uid://b8pfwvplwd112" path="res://game/main.gd" id="1_main"]
+[ext_resource type="Resource" uid="uid://btrfv3nfr8sj2" path="res://game/maps/map_db.tres" id="2_db"]
+[ext_resource type="PackedScene" path="res://ui/map_browser/map_browser.tscn" id="3_browser"]
+
 [node name="Main" type="Node" unique_id=1395246450]
+script = ExtResource("1_main")
+map_db = ExtResource("2_db")
+
+[node name="World" type="Node3D" parent="."]
+
+[node name="MapHost" type="Node3D" parent="World"]
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="MapBrowser" parent="UI" instance=ExtResource("3_browser")]
