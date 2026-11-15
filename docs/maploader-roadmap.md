@@ -1,7 +1,7 @@
 # Maploader Roadmap
 
-**Status:** Active — Phase 0 closed 2026-11-13; Phase 1 closed 2026-11-13. Phase 2 is
-gated on #40.
+**Status:** Active — Phase 0 closed 2026-11-13; Phase 1 closed 2026-11-13; #40
+finalized its decisions 2026-11-14 (closed by #51), unblocking Phase 2.
 
 ## Summary
 
@@ -33,11 +33,14 @@ buttons, and validation/tests/docs cleanup. Phase 1 review follow-ups landed
 in #46: stronger content-test scene checks, marker-root validation, stricter ID
 handling, and documentation of the id/validation conventions. Design-level
 leftovers from the Phase 1 review were decided in #47 (see A17–A21); the
-game-level marker subclass moved to #40.
+game-level marker subclass moved to #40. The #40 session also changed duplicate
+reporting to one `duplicate_map_id` ERROR per duplicated ID with `MapDB` context
+(A30).
 
-### Phase 2 — Synchronous Loader (#13) — **GATED ON #40**
-- Implement `MapLoader` and `LoadedMap` per #40.
-- Loader-owned map root, terminal signal-based completion.
+### Phase 2 — Synchronous Loader (#13) — **READY (UNBLOCKED 2026-11-14)**
+- [ ] Implement `MapLoader`, `LoadedMap`, `MapLoadResult`, and `MapLoadError` per #40.
+- [ ] Loader-owned map root, one terminal `load_finished` signal, single-flight load.
+- [ ] Integration tests under `tests/integration/maploader/` per the #13 test plan.
 
 ### Phase 3 — Main & Bootstrap (#15)
 - Wire `Main` -> `World/MapHost`.
@@ -58,9 +61,9 @@ game-level marker subclass moved to #40.
 | A6 | `get_maps(filter: MapFilter)` returns an array copy; read-only is a documented convention. `clear_db` is editor-only. |
 | A7 | Plain array inspector; no `quick_add_map`. |
 | A8 | `MapScene` exposes only a `Markers` root via a typed node export. Game-level subclass for game-specific markers. |
-| A9 | `MapMarker extends Marker3D`; `MapMarkerCollection extends Node3D`; filter-based API. Only the base `MapMarker` ships in v1. |
+| A9 | `MapMarker extends Marker3D`; `MapMarkerCollection extends Node3D`; filter-based API. Core system ships only base classes in `system/maploader/`; game-specific marker subclasses live in `game/` (e.g. #50). |
 | A10 | Multiplayer spawn indexing/selection is out of scope for this system. |
-| A11 | `SpawnPoint`/`PlayerSpawnPoint`/`ItemSpawnPoint` are not v1 classes. |
+| A11 | `SpawnPoint`/`PlayerSpawnPoint`/`ItemSpawnPoint` are not maploader v1 classes. A game-level `PlayerSpawnPoint` is decided in A29. |
 | A12 | `MapScene` does not shortcut the `Markers` API. |
 | A13 | Marker order: depth-first tree order. |
 | A14 | Validation triggers: `@export_tool_button("Validate")` on `MapDB`/`MapManifest`/`MapScene`, `_get_configuration_warnings()`, CI content test. No editor plugin. |
@@ -77,10 +80,30 @@ game-level marker subclass moved to #40.
 | A20 | The manifest must live in `res://game/maps/<id>/` and the scene must share that folder. Both violations are ERRORs. |
 | A21 | `MapValidator` is dropped; components own validation and callers use `MapDB.validate()` / `MapManifest.validate()` directly. |
 
+### Decisions (2026-11-14, #40 loader session)
+
+| # | Decision |
+|---|---|
+| A22 | `load_map(id) -> MapLoadResult` emits one terminal `load_finished(result)` signal synchronously before returning. |
+| A23 | Standalone `MapLoadError` enum with specific codes (`SCENE_MISSING`, `INVALID_SCENE`, `INVALID_MANIFEST`, etc.) and strict check precedence. `MapLoadResult` carries code, manifest, map, and issues. |
+| A24 | Single-flight: reject with `ALREADY_LOADED`; failed loads leave the active map untouched. |
+| A25 | Host must be in-tree, empty, and not an ancestor of the loader; host owns placement. |
+| A26 | `LoadedMap` is a thin handle, invalidated immediately on unload (`id`/`manifest` remain readable post-unload). |
+| A27 | `unload()` is idempotent; emit `map_unloaded` once for real unloads only. |
+| A28 | Loader runs DB-wide validation; only target-scoped ERRORs block a load, classified into `SCENE_MISSING`, `INVALID_SCENE`, or `INVALID_MANIFEST`. Non-fatal issues log with `push_warning`. |
+| A29 | `PlayerSpawnPoint`/`PlayerSpawnFilter` live in `game/` and land with #15 via #50; no spawn API on the loader. |
+
+### Validation decision (2026-11-15, #40 follow-up)
+
+| # | Decision |
+|---|---|
+| A30 | `MapDB.validate()` reports one `duplicate_map_id` ERROR per duplicated ID with `context` set to `MapDB` and every involved manifest listed in the message. The loader detects a target duplicate with `map_db.get_map_ids().count(id) > 1`, not by inspecting issue `context`. |
+
+Full contract: [maploader.md](maploader.md#loader).
+
 ## Deferred items
 
-- Loader API, host contract, and unload semantics — #40.
-- Game-level marker subclass and spawn selection — #40.
+- Game-level marker subclass — #50, landing with #15 (spawn selection out of scope, A10/A29).
 - Async loader — #36.
 - Downloadable packs — #17.
 - Content hashing — #16.

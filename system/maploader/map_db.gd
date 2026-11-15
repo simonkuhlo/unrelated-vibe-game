@@ -18,7 +18,7 @@ extends Resource
 
 func validate() -> Array[MapValidationIssue]:
 	var issues: Array[MapValidationIssue] = []
-	var seen_ids: Dictionary = {}
+	var manifests_by_id: Dictionary = {}
 
 	for i in range(maps.size()):
 		var manifest: MapManifest = maps[i]
@@ -30,11 +30,29 @@ func validate() -> Array[MapValidationIssue]:
 
 		if manifest.id.is_empty():
 			continue
-		if seen_ids.has(manifest.id):
-			issues.append(MapValidationIssue.new(MapValidationIssue.Severity.ERROR, &"duplicate_map_id", "Duplicate map ID: %s" % manifest.id, manifest))
-		seen_ids[manifest.id] = true
+
+		if not manifests_by_id.has(manifest.id):
+			manifests_by_id[manifest.id] = []
+		manifests_by_id[manifest.id].append(manifest)
+
+	for id: StringName in manifests_by_id:
+		var duplicates: Array = manifests_by_id[id]
+		if duplicates.size() > 1:
+			var manifest_descriptions: Array[String] = []
+			for m: MapManifest in duplicates:
+				manifest_descriptions.append(_describe_manifest(m))
+			var msg := "Duplicate map ID '%s' found in %d manifests (%s)." % [id, duplicates.size(), ", ".join(manifest_descriptions)]
+			issues.append(MapValidationIssue.new(MapValidationIssue.Severity.ERROR, &"duplicate_map_id", msg, self))
 
 	return issues
+
+
+func _describe_manifest(manifest: MapManifest) -> String:
+	if not manifest.resource_path.is_empty():
+		return manifest.resource_path
+	if not manifest.display_name.is_empty():
+		return "'%s'" % manifest.display_name
+	return "<unnamed map manifest>"
 
 
 func is_valid() -> bool:
