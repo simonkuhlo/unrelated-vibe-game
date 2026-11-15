@@ -278,16 +278,23 @@ func test_load_target_duplicate_blocking() -> void:
 	assert_int(tracker["count"]).is_equal(1)
 
 
-func test_load_multiple_maps() -> void:
-	var target := _make_manifest(&"ok")
-	var other := _make_manifest(&"other")
-	_db.add_map(target)
-	_db.add_map(other)
+func test_load_different_map_after_unload() -> void:
+	var first := _make_manifest(&"first")
+	var second := _make_manifest(&"second")
+	_db.add_map(first)
+	_db.add_map(second)
 
-	var result := _loader.load_map(&"ok")
+	var result := _loader.load_map(&"first")
 	assert_int(result.code).is_equal(MapLoadError.Code.NONE)
-	assert_object(result.manifest).is_equal(target)
+	_loader.unload()
+
+	var tracker := _track_load_finished()
+	result = _loader.load_map(&"second")
+	assert_int(result.code).is_equal(MapLoadError.Code.NONE)
+	assert_object(result.manifest).is_equal(second)
 	assert_int(result.issues.size()).is_equal(0)
+	assert_int(tracker["count"]).is_equal(1)
+	assert_int(_host.get_child_count()).is_equal(1)
 
 
 func test_unload() -> void:
@@ -351,8 +358,11 @@ func test_external_detach_resets_loader_state_but_does_not_free() -> void:
 
 	assert_bool(_loader.is_loaded()).is_false()
 
-	# unload() must not free a detached root owned by external code.
+	# unload() must not free a detached root owned by external code, and a
+	# detached root is already unloaded, so no signal is emitted.
+	var unload_tracker := _track_map_unloaded()
 	_loader.unload()
+	assert_int(unload_tracker["count"]).is_equal(0)
 	assert_bool(is_instance_valid(root)).is_true()
 	assert_object(root.get_parent()).is_null()
 
@@ -366,7 +376,7 @@ func test_external_detach_resets_loader_state_but_does_not_free() -> void:
 	root.free()
 
 
-func test_external_reparented_root_is_not_freed_by_unload() -> void:
+func test_external_reparented_root_is_not_freed_and_next_load_proceeds() -> void:
 	var m := _make_manifest(&"test")
 	_db.add_map(m)
 	_loader.load_map(&"test")
@@ -377,17 +387,36 @@ func test_external_reparented_root_is_not_freed_by_unload() -> void:
 	_host.remove_child(root)
 	other_parent.add_child(root)
 
-	var tracker := _track_map_unloaded()
-	_loader.unload()
+	# Reparenting detaches the root from the host: external code owns it now.
+	assert_bool(_loader.is_loaded()).is_false()
+	assert_bool(handle.is_valid()).is_false()
+	assert_object(handle.get_root()).is_null()
 
+	var unload_tracker := _track_map_unloaded()
+	_loader.unload()
+	assert_int(unload_tracker["count"]).is_equal(0)
 	assert_bool(is_instance_valid(root)).is_true()
 	assert_object(root.get_parent()).is_equal(other_parent)
-	assert_bool(handle.is_valid()).is_false()
+
+	# The loader dropped the stale handle and can load again.
+	var tracker := _track_load_finished()
+	var result := _loader.load_map(&"test")
+	assert_int(result.code).is_equal(MapLoadError.Code.NONE)
 	assert_int(tracker["count"]).is_equal(1)
+	assert_int(_host.get_child_count()).is_equal(1)
+
+	# A pruned handle stays invalid even if the old root is re-attached.
+	other_parent.remove_child(root)
+	_host.add_child(root)
+	assert_bool(handle.is_valid()).is_false()
+	assert_object(handle.get_root()).is_null()
+	_host.remove_child(root)
+
 	other_parent.free()
+	root.free()
 
 
-func test_external_queue_free_resets_loader_state() -> void:
+func test_external_queue_free_allows_immediate_reload() -> void:
 	var m := _make_manifest(&"test")
 	_db.add_map(m)
 	_loader.load_map(&"test")
@@ -399,6 +428,18 @@ func test_external_queue_free_resets_loader_state() -> void:
 	assert_bool(_loader.is_loaded()).is_false()
 	assert_object(_loader.get_loaded_map()).is_null()
 	assert_bool(handle.is_valid()).is_false()
+
+	# The queued root is still a host child until the deferred deletion runs.
+	# Pruning detaches it so an immediate reload succeeds instead of returning
+	# HOST_OCCUPIED (A27/A31).
+	var tracker := _track_load_finished()
+	var result := _loader.load_map(&"test")
+
+	assert_int(result.code).is_equal(MapLoadError.Code.NONE)
+	assert_object(result.manifest).is_equal(m)
+	assert_int(tracker["count"]).is_equal(1)
+	assert_bool(_loader.is_loaded()).is_true()
+	assert_int(_host.get_child_count()).is_equal(1)
 
 
 func test_unload_after_external_invalidation_emits_nothing() -> void:
@@ -447,6 +488,51 @@ func test_load_after_unload_succeeds() -> void:
 	assert_int(tracker["count"]).is_equal(1)
 	assert_int(_host.get_child_count()).is_equal(1)
 	assert_bool(_loader.is_loaded()).is_true()
+
+
+func test_host_leaving_tree_keeps_map_loaded() -> void:
+	var m := _make_manifest(&"test")
+	_db.add_map(m)
+	_loader.load_map(&"test")
+	var handle := _loader.get_loaded_map()
+
+	# Temporarily removing the host (e.g. a paused/overlay scene) must not
+	# count as an unload while the root is still parented to the host (A31).
+	remove_child(_host)
+
+	assert_bool(_loader.is_loaded()).is_true()
+	assert_bool(handle.is_valid()).is_true()
+	assert_object(handle.get_root()).is_not_null()
+	assert_object(_loader.get_loaded_map()).is_equal(handle)
+
+	var tracker := _track_map_unloaded()
+	_loader.unload()
+
+	assert_bool(_loader.is_loaded()).is_false()
+	assert_bool(handle.is_valid()).is_false()
+	assert_int(_host.get_child_count()).is_equal(0)
+	assert_int(tracker["count"]).is_equal(1)
+
+	add_child(_host)
+
+
+func test_load_host_queued_for_deletion() -> void:
+	var m := _make_manifest(&"test")
+	_db.add_map(m)
+	var doomed_host := Node3D.new()
+	add_child(doomed_host)
+	doomed_host.queue_free()
+	_loader.map_host = doomed_host
+
+	var tracker := _track_load_finished()
+	var result := _loader.load_map(&"test")
+
+	assert_int(result.code).is_equal(MapLoadError.Code.HOST_INVALID)
+	assert_object(result.manifest).is_equal(m)
+	assert_int(tracker["count"]).is_equal(1)
+	assert_int(doomed_host.get_child_count()).is_equal(0)
+
+	_loader.map_host = _host
 
 
 func test_unrelated_broken_map_does_not_block_target() -> void:
