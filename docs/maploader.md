@@ -1,7 +1,7 @@
 # Map Loader
 
 **Status:** Active — Phase 0 closed 2026-11-13; Phase 1 (data model) closed
-2026-11-13; Phase 2 (synchronous loader) unblocked 2026-11-14 by #40.
+2026-11-13; Phase 2 (synchronous loader) closed 2026-11-15.
 
 The rework moves map data authoring into the Godot editor and treats the
 editor's resource graph as the authority:
@@ -169,14 +169,17 @@ target-scoped:
   active map is untouched. v1 does not auto-unload or replace; callers unload
   first.
 - A failed load never disturbs the active map.
-- If external code frees, detaches, or queues for deletion (`is_queued_for_deletion()`) the map root, the loader treats the map as no longer loaded: `is_loaded()` returns false and the next `load_map()` proceeds. If external code detaches the root without freeing it, external code assumes ownership of that node; the loader clears its internal handle reference and will not free the detached node during subsequent `unload()` or `load_map()` calls.
+- If external code frees, detaches, reparents, or queues for deletion (`is_queued_for_deletion()`) the map root, the loader treats the map as no longer loaded: `is_loaded()` returns false and the next `load_map()` proceeds. A queued root is detached from the host during the next state sync, before the occupancy check, so the deferred free cannot block the load. If external code detaches or reparents the root without freeing it, external code assumes ownership of that node; the loader clears its internal handle reference (invalidating the handle permanently) and will not free the detached node during subsequent `unload()` or `load_map()` calls.
+- Removing the host (or loader) from the SceneTree does not unload the map. The handle stays valid while the root remains parented to the host, and `unload()` still detaches and frees the root.
 
 ### `LoadedMap`
 
 - `LoadedMap` is a thin `RefCounted` handle: `id`, `manifest`, `root`
   (`MapScene`), and `is_valid()`. It is not a marker facade; query markers
-  through `root.markers` (A12).
-- Unload invalidates the handle (`is_valid() == false`) immediately. On an invalidated handle, `root` returns `null`, while `id` and `manifest` remain accessible for identification/logging.
+  through `root.markers` (A12). `is_valid()` is true only while the root is
+  alive, not queued for deletion, and still parented to the loader's
+  `map_host` (A31).
+- Unload invalidates the handle (`is_valid() == false`) immediately. On an invalidated handle, `root` returns `null`, while `id` and `manifest` remain accessible for identification/logging. External free/detach/reparent/queue invalidation also invalidates the handle permanently, even if the old root is later re-attached.
 - The loader settles state before emitting a signal, so handlers may call
   `unload()` (which unloads normally) or `load_map()` (which returns
   `ALREADY_LOADED`).
@@ -210,6 +213,12 @@ target-scoped:
 |---|---|
 | A30 | `MapDB.validate()` reports one `duplicate_map_id` ERROR per duplicated ID with `context` set to `MapDB`, `map_id` set to the duplicated ID, and every involved manifest listed in the message. The loader detects a target duplicate with the structured `map_id` (and `map_db.get_map_ids().count(id) > 1`), not by inspecting issue `context` or the message. |
 
+### Loader invalidation follow-up (2026-11-15, #53)
+
+| # | Decision |
+|---|---|
+| A31 | `LoadedMap.is_valid()` is host-scoped: the handle is valid only while its root is alive, not queued for deletion, and parented to the loader's `map_host`. External detach or reparent invalidates the handle permanently (external code owns the root), and a queued root is detached from the host during state sync so an immediate next `load_map()` proceeds. A host that leaves the SceneTree does not unload the map. |
+
 ## File layout
 
 ```text
@@ -222,7 +231,6 @@ system/maploader/
   map_marker_filter.gd      # MapMarkerFilter
   map_filter.gd             # MapFilter
   map_validation_issue.gd   # MapValidationIssue
-  # Phase 2 (#13):
   map_load_error.gd         # MapLoadError
   map_load_result.gd        # MapLoadResult
   loaded_map.gd             # LoadedMap
@@ -249,6 +257,7 @@ system/maploader/
 - [Issue #47: Phase 1 review design leftovers](https://github.com/simonkuhlo/unrelated-vibe-game/issues/47)
 - [Issue #40: loader API/host contract/unload semantics](https://github.com/simonkuhlo/unrelated-vibe-game/issues/40)
 - [Issue #13: synchronous v1 loader](https://github.com/simonkuhlo/unrelated-vibe-game/issues/13)
+- [Issue #53: Phase 2 loader invalidation follow-ups](https://github.com/simonkuhlo/unrelated-vibe-game/issues/53)
 - [Issue #15: Main bootstrap and map browser](https://github.com/simonkuhlo/unrelated-vibe-game/issues/15)
 - [Issue #50: game-level spawn marker](https://github.com/simonkuhlo/unrelated-vibe-game/issues/50)
 - [Issue #18: tests for the new data model](https://github.com/simonkuhlo/unrelated-vibe-game/issues/18)

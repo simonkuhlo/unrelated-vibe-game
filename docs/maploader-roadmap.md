@@ -1,7 +1,7 @@
 # Maploader Roadmap
 
-**Status:** Active — Phase 0 closed 2026-11-13; Phase 1 closed 2026-11-13; #40
-finalized its decisions 2026-11-14 (closed by #51), unblocking Phase 2.
+**Status:** Active — Phase 0 closed 2026-11-13; Phase 1 closed 2026-11-13;
+Phase 2 closed 2026-11-15 (#52, review follow-ups in #53).
 
 ## Summary
 
@@ -37,10 +37,15 @@ game-level marker subclass moved to #40. The #40 session also changed duplicate
 reporting to one `duplicate_map_id` ERROR per duplicated ID with `MapDB` context
 (A30).
 
-### Phase 2 — Synchronous Loader (#13) — **READY (UNBLOCKED 2026-11-14)**
-- [ ] Implement `MapLoader`, `LoadedMap`, `MapLoadResult`, and `MapLoadError` per #40.
-- [ ] Loader-owned map root, one terminal `load_finished` signal, single-flight load.
-- [ ] Integration tests under `tests/integration/maploader/` per the #13 test plan.
+### Phase 2 — Synchronous Loader (#13) — **CLOSED 2026-11-15**
+- [x] Implement `MapLoader`, `LoadedMap`, `MapLoadResult`, and `MapLoadError` per #40.
+- [x] Loader-owned map root, one terminal `load_finished` signal, single-flight load.
+- [x] Integration tests under `tests/integration/maploader/` per the #13 test plan.
+
+Phase 2 landed in #52. The Phase 2 review follow-ups landed in #53: host-scoped
+`LoadedMap` validity, detaching queued roots before the next load, permanent
+handle invalidation on external detach/reparent, and regression coverage for
+queue/reparent/host tree changes (A31). Phase 3 is unblocked.
 
 ### Phase 3 — Main & Bootstrap (#15)
 - Wire `Main` -> `World/MapHost`.
@@ -98,6 +103,12 @@ reporting to one `duplicate_map_id` ERROR per duplicated ID with `MapDB` context
 | # | Decision |
 |---|---|
 | A30 | `MapDB.validate()` reports one `duplicate_map_id` ERROR per duplicated ID with `context` set to `MapDB`, `map_id` set to the duplicated ID, and every involved manifest listed in the message. The loader detects a target duplicate with the structured `map_id` (and `map_db.get_map_ids().count(id) > 1`), not by inspecting issue `context` or the message. |
+
+### Loader invalidation follow-up (2026-11-15, #53)
+
+| # | Decision |
+|---|---|
+| A31 | `LoadedMap.is_valid()` is host-scoped: valid only while the root is alive, not queued for deletion, and parented to the loader's `map_host`. External detach/reparent invalidates the handle permanently; a queued root is detached from the host during state sync so an immediate next `load_map()` proceeds; a host leaving the SceneTree does not unload the map. |
 
 Full contract: [maploader.md](maploader.md#loader).
 
