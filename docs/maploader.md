@@ -214,8 +214,9 @@ autoloads and performs no scene transitions.
 
 `PlayerSpawnPoint` (`MapMarker`) and `PlayerSpawnFilter` (`MapMarkerFilter`) are
 game-level marker types in `game/`; they are queried through `MapScene.markers`
-(A29). The built-in `test_box` sample map contains one spawn point with
-`player_index = 0`.
+(A29). The built-in `test_box` and `test_box_v2` sample maps each contain one
+spawn point with `player_index = 0`; the second map exists to exercise the
+browser with more than one DB entry.
 
 ## Decision log
 
