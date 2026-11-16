@@ -56,8 +56,8 @@ Phase 3 landed in #15 with #50. `game/main.gd` owns the built-in DB and the
 `MapLoader`, exposes `World/MapHost` and `UI`, and binds the map browser.
 `ui/map_browser/` lists DB maps with thumbnails, loads and unloads through the
 loader, and surfaces load results. `PlayerSpawnPoint`/`PlayerSpawnFilter` now
-live in `game/`, and the sample map uses one spawn point. A32 records the
-ownership and wiring decision.
+live in `game/`, and the sample maps use spawn points. A32 records the ownership
+and wiring decision.
 
 ### Phase 4 — V1 Closeout
 - Finalize `docs/maploader.md` and related documentation.
