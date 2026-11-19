@@ -1,8 +1,7 @@
 # Map Loader
 
-**Status:** Active — Phase 0 closed 2026-11-13; Phase 1 (data model) closed
-2026-11-13; Phase 2 (synchronous loader) closed 2026-11-15; Phase 3 (Main
-bootstrap and map browser) closed 2026-11-15.
+**Status:** Active — Phases 0–3 closed 2026-11-13/15; Phase 4 (v1 closeout
+documentation) remains open. Decisions A1–A33 recorded.
 
 The rework moves map data authoring into the Godot editor and treats the
 editor's resource graph as the authority:
@@ -87,7 +86,8 @@ editor's resource graph as the authority:
 
 1. Create `game/maps/<map_id>/`; the folder name matches `manifest.id`.
 2. Add `map_manifest.tres` (`MapManifest`) and `map_scene.tscn` (`MapScene` with a
-   `Markers` child using `MapMarkerCollection`).
+   `Markers` child using `MapMarkerCollection`). A per-map thumbnail is optional;
+   the v1 samples use the shared `res://assets/icon.svg` placeholder.
 3. Add the manifest to `game/maps/map_db.tres` through the inspector.
 4. Click **Validate** on the manifest, scene, and DB and fix every ERROR.
 5. Run `pwsh ./scripts/verify.ps1`. The content test is the CI authority for the
@@ -251,6 +251,12 @@ browser with more than one DB entry.
 |---|---|
 | A32 | `Main` (`game/main.gd`) is the sole owner of the built-in `MapDB` and `MapLoader`. It creates the loader at runtime outside `World/MapHost`, exposes `World/MapHost` and `UI`, and binds the browser via `bind(db, loader)`. UI only reads the DB, calls loader endpoints, and listens to loader signals; there are no autoloads or scene transitions. |
 
+### V1 closeout decision (2026-11-19, #56/#59)
+
+| # | Decision |
+|---|---|
+| A33 | `MapDB.validate()` instantiates every manifest scene on every load (A17/A18). Eager loading is accepted for the hand-curated built-in map set; revisit when the map count grows large or lazy loading returns. Source: [#35 deferred decision 8](https://github.com/simonkuhlo/unrelated-vibe-game/issues/35). |
+
 ## File layout
 
 ```text
@@ -272,7 +278,7 @@ game/
   main.tscn
   player_spawn_point.gd     # PlayerSpawnPoint
   player_spawn_filter.gd    # PlayerSpawnFilter
-  maps/<map_id>/            # map_manifest.tres, map_scene.tscn, thumbnail
+  maps/<map_id>/            # map_manifest.tres, map_scene.tscn, optional map-owned assets
   maps/map_db.tres          # built-in MapDB
 ui/
   map_browser/
@@ -280,8 +286,9 @@ ui/
     map_browser.tscn
 ```
 
-- `game/maps/<map_id>/` holds the manifest, scene, thumbnail, and map-owned
-  assets.
+- `game/maps/<map_id>/` holds the manifest, scene, and map-owned assets.
+  Per-map thumbnails are not required for v1: both sample manifests use the
+  shared `res://assets/icon.svg` placeholder.
 - IDs are lowercase `snake_case`; the folder name matches the id.
 - Directory name is `maploader` (matches docs and issue labels).
 
@@ -304,3 +311,5 @@ ui/
 - [Issue #15: Main bootstrap and map browser](https://github.com/simonkuhlo/unrelated-vibe-game/issues/15)
 - [Issue #50: game-level spawn marker](https://github.com/simonkuhlo/unrelated-vibe-game/issues/50)
 - [Issue #18: tests for the new data model](https://github.com/simonkuhlo/unrelated-vibe-game/issues/18)
+- [Issue #56: v1 release polish epic](https://github.com/simonkuhlo/unrelated-vibe-game/issues/56)
+- [Issue #59: Phase 4 decision handoff](https://github.com/simonkuhlo/unrelated-vibe-game/issues/59)
