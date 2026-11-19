@@ -20,7 +20,7 @@ These should be designed to be decoupled from game-specific rules where possible
 ### `game/`
 Holds game logic. Most of it will build on top of the systems created in `system/`. This is where game-specific rules, content integration, and gameplay flow live.
 
-Built-in map content lives in `game/maps/<map_id>/` (scene, manifest, thumbnail, and map-owned assets). The built-in map database is `game/maps/map_db.tres`; see [maploader.md](maploader.md). Map-owned assets stay with their map as an exception to the `assets/` rule.
+Built-in map content lives in `game/maps/<map_id>/` (scene, manifest, and map-owned assets). Per-map thumbnails are not required in v1; the sample manifests use the shared `res://assets/icon.svg` placeholder. The built-in map database is `game/maps/map_db.tres`; see [maploader.md](maploader.md). Map-owned assets stay with their map as an exception to the `assets/` rule.
 
 Maploader classes live in `system/maploader/`. The v1 data model is `MapDB`, `MapManifest`, `MapScene`, `MapMarker`, `MapMarkerCollection`, `MapMarkerFilter`, `MapFilter`, and `MapValidationIssue`. The Phase 2 loader classes (`MapLoadError`, `MapLoadResult`, `LoadedMap`, `MapLoader`) live alongside them; their contract is in [maploader.md](maploader.md#loader). `game/main.gd` is the v1 bootstrap that owns the built-in DB and loader, and `ui/map_browser/` is the minimal map browser. Generic base classes and tooling live in `system/`; game-specific markers such as `PlayerSpawnPoint` live in `game/`.
 

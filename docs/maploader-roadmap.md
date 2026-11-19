@@ -2,7 +2,8 @@
 
 **Status:** Active — Phase 0 closed 2026-11-13; Phase 1 closed 2026-11-13;
 Phase 2 closed 2026-11-15 (#52, review follow-ups in #53); Phase 3 closed
-2026-11-15 (#15, with #50).
+2026-11-15 (#15, with #50). Phase 4 (v1 closeout) remains open; decisions
+A1–A33 recorded.
 
 ## Summary
 
@@ -57,10 +58,14 @@ Phase 3 landed in #15 with #50. `game/main.gd` owns the built-in DB and the
 `ui/map_browser/` lists DB maps with thumbnails, loads and unloads through the
 loader, and surfaces load results. `PlayerSpawnPoint`/`PlayerSpawnFilter` now
 live in `game/`, and the sample maps use spawn points. A32 records the ownership
-and wiring decision.
+and wiring decision. `game/maps/test_box_v2/` is only a browser fixture with a
+second DB entry, not a distinct gameplay map.
 
-### Phase 4 — V1 Closeout
-- Finalize `docs/maploader.md` and related documentation.
+The release-polish epic #56 closed without `docs/` changes and handed Phase 4
+the information/decision handoff in #59.
+
+### Phase 4 — V1 Closeout — **OPEN**
+- Finalize `docs/maploader.md` and related documentation (source: #59).
 
 ## Decisions (2026-11-13)
 
@@ -123,6 +128,12 @@ and wiring decision.
 | # | Decision |
 |---|---|
 | A32 | `Main` (`game/main.gd`) is the sole owner of the built-in `MapDB` and `MapLoader`. It creates the loader at runtime outside `World/MapHost`, exposes `World/MapHost` and `UI`, and binds the browser via `bind(db, loader)`. UI only reads the DB, calls loader endpoints, and listens to loader signals; there are no autoloads or scene transitions. |
+
+### V1 closeout decision (2026-11-19, #56/#59)
+
+| # | Decision |
+|---|---|
+| A33 | `MapDB.validate()` instantiates every manifest scene on every load (A17/A18). Eager loading is accepted for the hand-curated built-in map set; revisit when the map count grows large or lazy loading returns. Source: #35 deferred decision 8. |
 
 Full contract: [maploader.md](maploader.md#loader).
 
