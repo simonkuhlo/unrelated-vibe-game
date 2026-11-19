@@ -15,26 +15,24 @@ $godot = Resolve-GodotBinary -GodotBin $GodotBin -ProjectRoot $root
 Assert-GodotVersion -Godot $godot -ProjectRoot $root
 
 Write-Host "== Import ==" -ForegroundColor Cyan
-# Piping forces PowerShell to wait for Godot and sets $LASTEXITCODE on Windows,
-# where the editor executable is a GUI-subsystem binary.
-& $godot --headless --quiet --path $root --import 2>&1 | Out-Host
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "Project import failed (exit $LASTEXITCODE)." -ForegroundColor Red
-    exit $LASTEXITCODE
+$exitCode = Invoke-Godot -Godot $godot -GodotArgs @("--headless", "--quiet", "--path", $root, "--import")
+if ($exitCode -ne 0) {
+    Write-Host "Project import failed (exit $exitCode)." -ForegroundColor Red
+    exit $exitCode
 }
 
 Write-Host "== Parse ==" -ForegroundColor Cyan
-& $godot --headless --path $root -s res://tests/tools/check_scripts.gd 2>&1 | Out-Host
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "Script parsing failed (exit $LASTEXITCODE)." -ForegroundColor Red
-    exit $LASTEXITCODE
+$exitCode = Invoke-Godot -Godot $godot -GodotArgs @("--headless", "--path", $root, "-s", "res://tests/tools/check_scripts.gd")
+if ($exitCode -ne 0) {
+    Write-Host "Script parsing failed (exit $exitCode)." -ForegroundColor Red
+    exit $exitCode
 }
 
 Write-Host "== Boot ==" -ForegroundColor Cyan
-& $godot --headless --path $root --quit-after 2 2>&1 | Out-Host
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "Main scene failed to boot (exit $LASTEXITCODE)." -ForegroundColor Red
-    exit $LASTEXITCODE
+$exitCode = Invoke-Godot -Godot $godot -GodotArgs @("--headless", "--path", $root, "--quit-after", "2")
+if ($exitCode -ne 0) {
+    Write-Host "Main scene failed to boot (exit $exitCode)." -ForegroundColor Red
+    exit $exitCode
 }
 
 Write-Host "Static checks passed." -ForegroundColor Green

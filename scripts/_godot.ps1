@@ -75,6 +75,35 @@ function Assert-GodotVersion {
     }
 }
 
+function Invoke-Godot {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Godot,
+
+        [Parameter(Mandatory = $true)]
+        [string[]]$GodotArgs
+    )
+
+    # Windows PowerShell treats native stderr as a terminating error when
+    # $ErrorActionPreference is Stop. Relax it only for the native process and
+    # restore the caller's preference afterwards so every entry point behaves
+    # the same way on Windows and Linux.
+    $previousErrorAction = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = "Continue"
+        & $Godot @GodotArgs 2>&1 | Out-Host
+        $exitCode = $LASTEXITCODE
+    }
+    finally {
+        $ErrorActionPreference = $previousErrorAction
+    }
+
+    if ($null -eq $exitCode) {
+        throw "Godot did not report an exit code: $Godot"
+    }
+    return $exitCode
+}
+
 function ConvertTo-ResPath {
     param(
         [string]$Path,
