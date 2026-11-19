@@ -50,10 +50,10 @@ if (Test-Path -LiteralPath $reportsDir) {
 $importCache = Join-Path (Join-Path $root ".godot") "imported"
 if (-not (Test-Path -LiteralPath $importCache)) {
     Write-Host "== Import ==" -ForegroundColor Cyan
-    & $godot --headless --quiet --path $root --import 2>&1 | Out-Host
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "Project import failed (exit $LASTEXITCODE)." -ForegroundColor Red
-        exit $LASTEXITCODE
+    $exitCode = Invoke-Godot -Godot $godot -GodotArgs @("--headless", "--quiet", "--path", $root, "--import")
+    if ($exitCode -ne 0) {
+        Write-Host "Project import failed (exit $exitCode)." -ForegroundColor Red
+        exit $exitCode
     }
 }
 
@@ -73,18 +73,10 @@ foreach ($target in $targets) {
 }
 
 Write-Host "Running tests in: $($targets -join ', ')" -ForegroundColor Cyan
-# Tests deliberately exercise push_warning()/push_error(). Windows PowerShell
-# treats native stderr as a terminating error when ErrorActionPreference is
-# Stop, so relax it for the test process and restore it afterwards.
-$previousErrorAction = $ErrorActionPreference
-try {
-    $ErrorActionPreference = "Continue"
-    & $godot @godotArgs 2>&1 | Out-Host
-}
-finally {
-    $ErrorActionPreference = $previousErrorAction
-}
-$exitCode = $LASTEXITCODE
+# Tests deliberately exercise push_warning()/push_error(). The shared helper
+# keeps native stderr from aborting Windows PowerShell and returns the exit
+# code without weakening the zero-test guard or non-zero failure handling.
+$exitCode = Invoke-Godot -Godot $godot -GodotArgs $godotArgs
 
 $report = Get-ChildItem -LiteralPath $reportsDir -Recurse -Filter "results.xml" -ErrorAction SilentlyContinue |
     Sort-Object LastWriteTimeUtc -Descending |
@@ -97,16 +89,19 @@ if ($report) {
     Write-Host "Report: $($report.FullName)" -ForegroundColor DarkGray
 }
 
+# A failing Godot/gdUnit4 process is the primary signal. Report its exit code
+# before the zero-test guard so both entry points surface the same failure;
+# the guard still fails a zero-test run when Godot itself exited successfully.
+if ($exitCode -ne 0) {
+    Write-Host "Tests failed (gdUnit4 exit $exitCode) with $testCount test cases." -ForegroundColor Red
+    exit $exitCode
+}
+
 # gdUnit4 exits 0 when nothing was collected. That is indistinguishable from a
 # green run, so treat it as a failure.
 if ($testCount -eq 0) {
     Write-Host "No test cases were collected. Failing to avoid a false green." -ForegroundColor Red
     exit 1
-}
-
-if ($exitCode -ne 0) {
-    Write-Host "Tests failed (gdUnit4 exit $exitCode) with $testCount test cases." -ForegroundColor Red
-    exit $exitCode
 }
 
 Write-Host "Tests passed ($testCount test cases)." -ForegroundColor Green
