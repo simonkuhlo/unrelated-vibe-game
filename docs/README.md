@@ -8,7 +8,7 @@
 - [Map Loader](maploader.md) - v1 maploader contracts, decisions, and current state
 - [Maploader Roadmap](maploader-roadmap.md) - Phase status and decisions for the maploader v1 rework
 - [Getting Started](getting-started.md) - Setup instructions
-- [Multiplayer](multiplayer.md) - Multiplayer architecture notes (placeholder)
+- [Multiplayer](multiplayer.md) - Active MVP session loop spec, states, and contracts
 - [Agent Runbooks](agents/README.md) - Execution guides for agents and the humans directing them
 - [Research](research/README.md) - Evaluations and research notes that inform decisions
 - [Future Ideas](future/ideas/multiplayer-session-system.md) - Early ideas; not accepted specifications
